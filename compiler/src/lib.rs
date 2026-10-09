@@ -1,4 +1,6 @@
+mod ast;
 mod lexer;
+mod parser;
 mod span;
 mod token;
 
@@ -9,7 +11,11 @@ impl Driver {
         Self {}
     }
 
-    pub fn compile(self, source: &str) {
+    pub fn compile(&self, source: &str) {
         let tokens = lexer::Lexer::new(source).tokenize();
+
+        let ast = parser::Parser::new(tokens).parse().unwrap();
+
+        println!("{ast:?}");
     }
 }

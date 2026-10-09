@@ -1,6 +1,6 @@
 use crate::span::Span;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     // Keywords
     Fun,
