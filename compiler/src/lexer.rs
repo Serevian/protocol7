@@ -89,7 +89,13 @@ impl Lexer {
             if ch.is_ascii_digit() || ch == '_' {
                 number.push(self.advance().unwrap());
             } else if ch.is_alphabetic() {
-                number.push(self.advance().unwrap());
+                while let Some(invalid_ch) = self.peek() {
+                    if invalid_ch.is_alphanumeric() || invalid_ch == '_' {
+                        number.push(self.advance().unwrap());
+                    } else {
+                        break;
+                    }
+                }
                 return Token::new(TokenKind::Error(number));
             } else {
                 break;
