@@ -1,3 +1,5 @@
+mod assembly_ast;
+mod assembly_generator;
 mod ast;
 mod lexer;
 mod parser;

@@ -8,7 +8,7 @@ pub enum TokenKind {
 
     // Identifiers
     Identifier(String),
-    Literal(String),
+    IntLiteral(i64),
 
     Arrow,
     Minus,

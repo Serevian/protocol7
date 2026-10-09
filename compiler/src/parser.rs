@@ -99,7 +99,7 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let token = self.advance().clone();
         match token.kind {
-            TokenKind::Literal(name) => Ok(Expression::Literal(Literal::Int(name))),
+            TokenKind::IntLiteral(num) => Ok(Expression::Literal(Literal::Int(num))),
             TokenKind::Return => {
                 let expression = self.parse_expression()?;
                 Ok(Expression::Return(Some(Box::new(expression))))

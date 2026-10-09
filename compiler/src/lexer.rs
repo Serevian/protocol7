@@ -102,7 +102,9 @@ impl Lexer {
             }
         }
 
-        Token::new(TokenKind::Literal(number))
+        let int = number.parse::<i64>().unwrap();
+
+        Token::new(TokenKind::IntLiteral(int))
     }
 
     fn handle_newlines(&mut self) -> Token {
