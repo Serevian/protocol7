@@ -1,0 +1,10 @@
+[package]
+name = "protocol7-compiler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[lints.clippy]
+nursery = "warn"
+pedantic = "warn"

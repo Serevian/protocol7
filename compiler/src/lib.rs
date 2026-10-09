@@ -1,0 +1,15 @@
+mod lexer;
+mod span;
+mod token;
+
+pub struct Driver {}
+
+impl Driver {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn compile(self, source: &str) {
+        let tokens = lexer::Lexer::new(source).tokenize();
+    }
+}
