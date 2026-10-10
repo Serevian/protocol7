@@ -121,8 +121,6 @@ fn run_test(file_path: &Path, extra_flags: &[String], single: bool) -> Result<Op
 
     let args = Driver::try_parse_from(&argv).map_err(|e| format!("Bad driver options: {e}"))?;
 
-    driver::run(&args, &mut std::io::sink()).map_err(|e| format!("{e:#}"))?;
-
     let mut out: Box<dyn Write> = if single && args.stops_early() {
         Box::new(std::io::stdout())
     } else {
