@@ -1,5 +1,5 @@
 use crate::{
-    ast::*,
+    ast::{Block, Expression, Function, Item, Literal, Program, Statement, Type, UnaryOperator},
     token::{Token, TokenKind},
 };
 
@@ -9,10 +9,14 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    #[must_use]
+    pub const fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, cursor: 0 }
     }
 
+    /// # Errors
+    ///
+    /// Will return `Err` if the parser finds a non conformant expression/statement
     pub fn parse(&mut self) -> Result<Program, String> {
         let mut items = Vec::new();
         self.skip_newlines();
@@ -38,7 +42,7 @@ impl Parser {
 
         let name = match self.advance().kind.clone() {
             TokenKind::Identifier(name) => name,
-            other => return Err(format!("Expected function name, found {:?}", other)),
+            other => return Err(format!("Expected function name, found {other:?}")),
         };
 
         // ( ... )
@@ -68,7 +72,7 @@ impl Parser {
     fn parse_type(&mut self) -> Result<Type, String> {
         match self.advance().kind.clone() {
             TokenKind::Identifier(name) => Ok(Type::Named(name)),
-            other => Err(format!("Expected type name, found {:?}", other)),
+            other => Err(format!("Expected type name, found {other:?}")),
         }
     }
 
@@ -90,9 +94,9 @@ impl Parser {
             if self.check(&TokenKind::CloseBrace) {
                 tail_expression = Some(Box::new(expression));
                 break;
-            } else {
-                statements.push(Statement::Expression(expression));
             }
+
+            statements.push(Statement::Expression(expression));
         }
 
         self.expect(&TokenKind::CloseBrace)?;
@@ -110,10 +114,10 @@ impl Parser {
                 || self.is_at_end()
             {
                 return Ok(Expression::Return(None));
-            } else {
-                let expression = self.parse_expression()?;
-                return Ok(Expression::Return(Some(Box::new(expression))));
             }
+
+            let expression = self.parse_expression()?;
+            return Ok(Expression::Return(Some(Box::new(expression))));
         }
 
         self.parse_unary()
@@ -145,11 +149,9 @@ impl Parser {
     }
 
     fn peek(&self) -> &TokenKind {
-        &self
-            .tokens
+        self.tokens
             .get(self.cursor)
-            .map(|t| &t.kind)
-            .unwrap_or(&TokenKind::EndOfFile)
+            .map_or(&TokenKind::EndOfFile, |t| &t.kind)
     }
 
     fn advance(&mut self) -> &Token {

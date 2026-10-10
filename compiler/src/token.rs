@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     // Keywords
     Fun,
@@ -27,7 +27,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind) -> Self {
+    pub const fn new(kind: TokenKind) -> Self {
         Self { kind }
     }
 }

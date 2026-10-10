@@ -34,22 +34,22 @@ pub enum Expression {
     Literal(Literal),
     Unary {
         operator: UnaryOperator,
-        expression: Box<Expression>,
+        expression: Box<Self>,
     },
-    Return(Option<Box<Expression>>),
+    Return(Option<Box<Self>>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
     Int(i64),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Named(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOperator {
     Negation, // -
 }

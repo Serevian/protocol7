@@ -9,6 +9,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
+    #[must_use]
     pub fn new(source: &str) -> Self {
         Self {
             source: source.to_string(),
@@ -16,6 +17,7 @@ impl Lexer {
         }
     }
 
+    #[must_use]
     pub fn tokenize(mut self) -> Vec<Token> {
         let mut vec = Vec::new();
 
@@ -74,10 +76,6 @@ impl Lexer {
         Some(c)
     }
 
-    fn is_at_end(&self) -> bool {
-        self.cursor >= self.source.len()
-    }
-
     fn identifier_or_keyword(&mut self, first_character: char) -> Token {
         let mut identifier = String::from(first_character);
         while let Some(ch) = self.peek() {
@@ -130,6 +128,6 @@ impl Lexer {
             };
         }
 
-        return Token::new(TokenKind::Newline);
+        Token::new(TokenKind::Newline)
     }
 }

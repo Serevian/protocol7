@@ -1,8 +1,7 @@
-mod assembly_ast;
+mod aast;
 pub mod assembly_generator;
 mod ast;
-pub mod code_emitter;
+pub mod emitter;
 pub mod lexer;
 pub mod parser;
-mod span;
 mod token;

@@ -56,7 +56,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let asm_text = code_emitter::Emitter::new().emit_program(&asm_ast);
+    let asm_text = emitter::Emitter::new().emit_program(&asm_ast);
 
     let binary_name = args.output.unwrap_or_else(|| {
         let mut path = args.input.clone();

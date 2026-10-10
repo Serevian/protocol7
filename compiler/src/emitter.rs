@@ -1,16 +1,18 @@
-use crate::assembly_ast::*;
+use crate::aast::{Function, Instruction, Operand, Program};
 
 pub struct Emitter {
     output: String,
 }
 
 impl Emitter {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             output: String::new(),
         }
     }
 
+    #[must_use]
     pub fn emit_program(mut self, program: &Program) -> String {
         self.writeln(".intel_syntax noprefix");
 
@@ -47,15 +49,15 @@ impl Emitter {
                 source,
                 destination,
             } => {
-                let destination_str = self.format_operand(destination);
-                let source_str = self.format_operand(source);
+                let destination_str = Self::format_operand(destination);
+                let source_str = Self::format_operand(source);
                 self.writeln(&format!("\tmov {destination_str}, {source_str}"));
             }
             Instruction::Ret => self.writeln("\tret"),
         }
     }
 
-    fn format_operand(&self, operand: &Operand) -> String {
+    fn format_operand(operand: &Operand) -> String {
         match operand {
             Operand::Immediate(n) => n.to_string(),
             // For now maps to the 32-bit return register `eax`
@@ -66,5 +68,11 @@ impl Emitter {
     fn writeln(&mut self, line: &str) {
         self.output.push_str(line);
         self.output.push('\n');
+    }
+}
+
+impl Default for Emitter {
+    fn default() -> Self {
+        Self::new()
     }
 }

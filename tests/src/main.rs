@@ -14,7 +14,7 @@ fn main() {
 
     let mut entries: Vec<PathBuf> = std::fs::read_dir(&fixtures_dir)
         .expect("Failed to read tests/fixtures folder")
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .map(|e| e.path())
         .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("p7"))
         .collect();
@@ -49,7 +49,7 @@ fn main() {
                     "✓ PASS".green().bold(),
                     path.file_name().unwrap().to_string_lossy(),
                     "(exit:".dimmed(),
-                    format!("{})", code).dimmed()
+                    format!("{code})").dimmed()
                 );
             }
             Err(err) => {
@@ -66,11 +66,11 @@ fn main() {
 
     println!("\n{}", "─".repeat(50).dimmed());
     if failed == 0 {
-        println!("{}", format!("All {} tests passed!", passed).green().bold());
+        println!("{}", format!("All {passed} tests passed!").green().bold());
     } else {
         println!(
             "{}",
-            format!("{} passed, {} failed", passed, failed).red().bold()
+            format!("{passed} passed, {failed} failed").red().bold()
         );
         std::process::exit(1);
     }
@@ -101,7 +101,7 @@ fn run_test(file_path: &Path) -> Result<i32, String> {
     let mut generator = p7c::assembly_generator::AssemblyGenerator::new(ast);
     let asm_ast = generator.generate();
 
-    let asm_text = p7c::code_emitter::Emitter::new().emit_program(&asm_ast);
+    let asm_text = p7c::emitter::Emitter::new().emit_program(&asm_ast);
 
     // 3. Assemble and Link in a temporary directory
     let temp_dir = tempdir().map_err(|e| format!("Tempdir creation failed: {e}"))?;
@@ -131,8 +131,7 @@ fn run_test(file_path: &Path) -> Result<i32, String> {
         Ok(actual_exit)
     } else {
         Err(format!(
-            "Exit code mismatch: expected {}, got {}",
-            expected_exit, actual_exit
+            "Exit code mismatch: expected {expected_exit}, got {actual_exit}"
         ))
     }
 }
