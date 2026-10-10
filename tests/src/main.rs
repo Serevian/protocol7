@@ -4,6 +4,7 @@ use std::process::Command;
 
 use colored::Colorize;
 use driver::{Driver, Parser};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tempfile::tempdir;
 
 fn main() {
@@ -48,9 +49,22 @@ fn main() {
     let (mut passed, mut failed) = (0, 0);
     let single = entries.len() == 1;
 
-    for path in &entries {
+    let results: Vec<Result<Option<i32>, String>> = if single {
+        entries
+            .iter()
+            .map(|p| run_test(p, &driver_flags, true))
+            .collect()
+    } else {
+        // Preserve order
+        entries
+            .par_iter()
+            .map(|p| run_test(p, &driver_flags, false))
+            .collect()
+    };
+
+    for (path, result) in entries.iter().zip(results) {
         let name = path.file_name().unwrap().to_string_lossy();
-        match run_test(path, &driver_flags, single) {
+        match result {
             Ok(Some(code)) => {
                 passed += 1;
                 println!(
