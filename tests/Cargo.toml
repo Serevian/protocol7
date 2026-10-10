@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-p7c = { workspace = true }
+driver = { path = "../driver" }
 colored = "3.1.1"
 tempfile = "3.27.0"
 

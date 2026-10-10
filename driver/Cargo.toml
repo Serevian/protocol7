@@ -3,6 +3,14 @@ name = "driver"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "driver"
+path = "src/lib.rs"
+
+[[bin]]
+name = "p7c"
+path = "src/main.rs"
+
 [dependencies]
 p7c = { workspace = true }
 anyhow = "1.0.104"

@@ -42,3 +42,79 @@ pub enum Register {
     AX,
     R10,
 }
+
+use std::fmt;
+
+const INDENT: &str = "    ";
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, function) in self.functions.iter().enumerate() {
+            if i > 0 {
+                f.write_str("\n\n")?; // blank line between functions
+            }
+            write!(f, "{function}")?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:", self.identifier)?;
+        for instruction in &self.instructions {
+            write!(f, "\n{INDENT}{instruction}")?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // Intel order: destination first
+            Self::Mov {
+                source,
+                destination,
+            } => {
+                write!(f, "mov {destination}, {source}")
+            }
+            Self::Unary { operator, operand } => write!(f, "{operator} {operand}"),
+            Self::AllocateStack(bytes) => write!(f, "sub rsp, {bytes}"),
+            Self::Ret => write!(f, "ret"),
+        }
+    }
+}
+
+impl fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Negation => write!(f, "neg"),
+            Self::Not => write!(f, "not"),
+        }
+    }
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Immediate(n) => write!(f, "{n}"),
+            Self::Register(register) => write!(f, "{register}"),
+            // Should be gone after pseudo-register replacement; `%` makes leaks obvious
+            Self::PseudoRegister(name) => write!(f, "%{name}"),
+            Self::Stack(0) => write!(f, "DWORD PTR [rbp]"),
+            // `{:+}` always prints the sign: [rbp-4] / [rbp+8]
+            Self::Stack(offset) => write!(f, "DWORD PTR [rbp{offset:+}]"),
+        }
+    }
+}
+
+impl fmt::Display for Register {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // 32-bit names, matching the DWORD PTR memory operands
+        match self {
+            Self::AX => write!(f, "eax"),
+            Self::R10 => write!(f, "r10d"),
+        }
+    }
+}

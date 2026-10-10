@@ -74,6 +74,7 @@ impl AssemblyGenerator {
                         source: self.lower_value(v),
                         destination: aast::Operand::Register(aast::Register::AX),
                     });
+                    instructions.push(aast::Instruction::Ret);
                 }
                 None => {
                     instructions.push(aast::Instruction::Ret);
