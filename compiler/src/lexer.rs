@@ -30,6 +30,21 @@ impl Lexer {
                     }
                     _ => Token::new(TokenKind::Minus),
                 },
+                '/' => match self.peek() {
+                    Some('/') => {
+                        let _ = self.advance();
+
+                        while let Some(ch) = self.peek() {
+                            // Don't advance past a newline, the tokenizer will handle it
+                            if ch == '\n' {
+                                break;
+                            }
+                            self.advance();
+                        }
+                        continue;
+                    }
+                    _ => todo!(),
+                },
                 '(' => Token::new(TokenKind::OpenParen),
                 ')' => Token::new(TokenKind::CloseParen),
                 '{' => Token::new(TokenKind::OpenBrace),
