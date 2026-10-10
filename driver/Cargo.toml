@@ -1,0 +1,10 @@
+[package]
+name = "driver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+p7c = { workspace = true }
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+colored = "3.1.1"
