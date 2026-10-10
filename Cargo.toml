@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["cli","compiler", "tests"]
+members = ["compiler", "driver", "tests"]
 
 [workspace.dependencies]
-protocol7-compiler = { path = "compiler" }
+p7c = { path = "compiler" }

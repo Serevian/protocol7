@@ -1,5 +1,5 @@
 [package]
-name = "protocol7-compiler"
+name = "p7c"
 version = "0.1.0"
 edition = "2024"
 

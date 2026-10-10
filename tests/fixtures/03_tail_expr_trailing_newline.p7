@@ -1,3 +1,5 @@
+// EXIT: 99
 fun main() -> i32 {
-    return 2
+    99
+
 }
