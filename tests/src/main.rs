@@ -133,18 +133,19 @@ fn run_test(file_path: &Path, extra_flags: &[String], single: bool) -> Result<Op
     ];
     argv.extend_from_slice(extra_flags);
 
-    let args = Driver::try_parse_from(&argv).map_err(|e| format!("Bad driver options: {e}"))?;
+    let driver_args =
+        Driver::try_parse_from(&argv).map_err(|e| format!("Bad driver options: {e}"))?;
 
-    let mut out: Box<dyn Write> = if single && args.stops_early() {
+    let mut out: Box<dyn Write> = if single && driver_args.stops_early() {
         Box::new(std::io::stdout())
     } else {
         Box::new(std::io::sink())
     };
 
-    driver::run(&args, &mut out).map_err(|e| format!("{e:#}"))?;
+    driver::run(&driver_args, &mut out).map_err(|e| format!("{e:#}"))?;
     out.flush().ok();
 
-    if args.stops_early() {
+    if driver_args.stops_early() {
         return Ok(None);
     }
 

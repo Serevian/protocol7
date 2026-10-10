@@ -25,6 +25,7 @@ impl Lexer {
             let token = match ch {
                 'a'..='z' | 'A'..='Z' => self.identifier_or_keyword(ch),
                 '0'..='9' => self.number(ch),
+                '+' => Token::new(TokenKind::Plus),
                 '-' => match self.peek() {
                     Some('>') => {
                         let _ = self.advance();
@@ -32,6 +33,7 @@ impl Lexer {
                     }
                     _ => Token::new(TokenKind::Minus),
                 },
+                '*' => Token::new(TokenKind::Star),
                 '/' => match self.peek() {
                     Some('/') => {
                         let _ = self.advance();
@@ -45,8 +47,9 @@ impl Lexer {
                         }
                         continue;
                     }
-                    _ => todo!(),
+                    _ => Token::new(TokenKind::Slash),
                 },
+                '%' => Token::new(TokenKind::Percent),
                 '(' => Token::new(TokenKind::OpenParen),
                 ')' => Token::new(TokenKind::CloseParen),
                 '{' => Token::new(TokenKind::OpenBrace),

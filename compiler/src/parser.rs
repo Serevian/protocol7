@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Block, Expression, Function, Item, Literal, Program, Statement, Type, UnaryOperator},
+    ast::{
+        BinaryOperator, Block, Expression, Function, Item, Literal, Program, Statement, Type,
+        UnaryOperator,
+    },
     token::{Token, TokenKind},
 };
 
@@ -48,6 +51,7 @@ impl Parser {
         // ( ... )
         self.expect(&TokenKind::OpenParen)?;
         // Parse parameters
+        self.skip_newlines();
         self.expect(&TokenKind::CloseParen)?;
 
         // Optional -> Type
@@ -120,7 +124,53 @@ impl Parser {
             return Ok(Expression::Return(Some(Box::new(expression))));
         }
 
-        self.parse_unary()
+        self.parse_expression_climbing(0)
+    }
+
+    fn parse_expression_climbing(&mut self, min_precedence: u8) -> Result<Expression, String> {
+        // Parse left atoms, parens expressions or unary operators
+        let mut lhs = self.parse_unary()?;
+        while let Some((precedence, association, operator)) = Self::binary_op_info(self.peek()) {
+            if precedence < min_precedence {
+                break;
+            }
+
+            // Consume operator
+            self.advance();
+
+            // Now that it has consumed the operator, it can skip newlines
+            self.skip_newlines();
+
+            let next_min_precedence = match association {
+                Association::Left => precedence + 1,
+                Association::Right => precedence,
+            };
+
+            let rhs = self.parse_expression_climbing(next_min_precedence)?;
+
+            lhs = Expression::Binary {
+                left: Box::new(lhs),
+                operator,
+                right: Box::new(rhs),
+            };
+        }
+
+        Ok(lhs)
+    }
+
+    const fn binary_op_info(kind: &TokenKind) -> Option<(u8, Association, BinaryOperator)> {
+        match kind {
+            // Precedence 1 (Left-Associative)
+            TokenKind::Plus => Some((1, Association::Left, BinaryOperator::Add)),
+            TokenKind::Minus => Some((1, Association::Left, BinaryOperator::Subtract)),
+
+            // Precedence 2 (Higher Precedence)
+            TokenKind::Star => Some((2, Association::Left, BinaryOperator::Multiply)),
+            TokenKind::Slash => Some((2, Association::Left, BinaryOperator::Divide)),
+            TokenKind::Percent => Some((2, Association::Left, BinaryOperator::Remainder)),
+
+            _ => None,
+        }
     }
 
     fn parse_unary(&mut self) -> Result<Expression, String> {
@@ -191,4 +241,10 @@ impl Parser {
             self.advance();
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Association {
+    Left,
+    Right, // Still don't have any right association operators
 }

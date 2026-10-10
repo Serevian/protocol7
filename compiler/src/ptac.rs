@@ -17,12 +17,27 @@ pub enum Instruction {
         source: Value,
         destination: Value,
     },
+    Binary {
+        operator: BinaryOperator,
+        source1: Value,
+        source2: Value,
+        destination: Value,
+    },
     Return(Option<Value>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOperator {
     Negation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +82,14 @@ impl fmt::Display for Instruction {
             } => {
                 write!(f, "{destination} = {operator}{source}")
             }
+            Self::Binary {
+                operator,
+                source1,
+                source2,
+                destination,
+            } => {
+                write!(f, "{destination} = {source1} {operator} {source2}")
+            }
             Self::Return(None) => write!(f, "return"),
             Self::Return(Some(value)) => write!(f, "return {value}"),
         }
@@ -77,6 +100,18 @@ impl fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Negation => write!(f, "-"),
+        }
+    }
+}
+
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add => write!(f, "+"),
+            Self::Subtract => write!(f, "-"),
+            Self::Multiply => write!(f, "*"),
+            Self::Divide => write!(f, "/"),
+            Self::Remainder => write!(f, "%"),
         }
     }
 }

@@ -17,7 +17,10 @@ pub struct Driver {
     output: Option<PathBuf>,
 
     #[arg(long)]
-    lex: bool,
+    lex_table: bool,
+
+    #[arg(long)]
+    lex_lines: bool,
 
     #[arg(long)]
     parse: bool,
@@ -34,7 +37,7 @@ pub struct Driver {
 
 impl Driver {
     pub fn stops_early(&self) -> bool {
-        self.lex || self.parse || self.ptac || self.codegen || self.emit_asm
+        self.lex_table || self.lex_lines || self.parse || self.ptac || self.codegen || self.emit_asm
     }
 }
 
@@ -43,8 +46,14 @@ pub fn run(args: &Driver, out: &mut dyn Write) -> Result<()> {
         .with_context(|| format!("Could not read input file: {}", args.input.display()))?;
 
     let tokens = lexer::Lexer::new(&source).tokenize();
-    if args.lex {
-        writeln!(out, "{:#?}", tokens)?;
+    if args.lex_table {
+        let string = token::format_token_table(&tokens);
+        writeln!(out, "{string}")?;
+        return Ok(());
+    }
+    if args.lex_lines {
+        let string = token::format_token_lines(&tokens);
+        writeln!(out, "{string}")?;
         return Ok(());
     }
 

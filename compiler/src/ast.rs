@@ -38,6 +38,11 @@ pub enum Expression {
         operator: UnaryOperator,
         expression: Box<Self>,
     },
+    Binary {
+        left: Box<Self>,
+        operator: BinaryOperator,
+        right: Box<Self>,
+    },
     Return(Option<Box<Self>>),
 }
 
@@ -51,9 +56,18 @@ pub enum Type {
     Named(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOperator {
     Negation, // -
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Remainder,
 }
 
 struct Node {
@@ -145,6 +159,14 @@ impl Expression {
                 operator,
                 expression,
             } => Node::new(format!("Unary {operator:?}"), vec![expression.to_node()]),
+            Self::Binary {
+                left,
+                operator,
+                right,
+            } => Node::new(
+                format!("Binary {operator:?}"),
+                vec![left.to_node(), right.to_node()],
+            ),
             Self::Return(expr) => Node::new("Return", expr.iter().map(|e| e.to_node()).collect()),
         }
     }

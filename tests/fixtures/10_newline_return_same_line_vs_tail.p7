@@ -1,0 +1,4 @@
+// EXIT: 25
+fun main() -> i32 {
+    return 10 + 15
+}

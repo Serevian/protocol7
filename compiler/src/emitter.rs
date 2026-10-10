@@ -1,4 +1,6 @@
-use crate::aast::{Function, Instruction, Operand, Program, Register, UnaryOperator};
+use crate::aast::{
+    BinaryOperator, Function, Instruction, Operand, Program, Register, UnaryOperator,
+};
 
 pub struct Emitter {
     output: String,
@@ -47,18 +49,13 @@ impl Emitter {
 
     fn emit_instruction(&mut self, instruction: &Instruction) {
         match instruction {
-            Instruction::Mov {
+            Instruction::Move {
                 source,
                 destination,
             } => {
                 let destination_str = Self::format_operand(destination);
                 let source_str = Self::format_operand(source);
                 self.writeln(&format!("\tmov {destination_str}, {source_str}"));
-            }
-            Instruction::Ret => {
-                self.writeln("\tmov rsp, rbp");
-                self.writeln("\tpop rbp");
-                self.writeln("\tret");
             }
             Instruction::Unary { operator, operand } => {
                 let operand = Self::format_operand(operand);
@@ -71,7 +68,32 @@ impl Emitter {
                     }
                 }
             }
+            Instruction::Binary {
+                operator,
+                source,
+                destination,
+            } => {
+                let source = Self::format_operand(source);
+                let destination = Self::format_operand(destination);
+                match operator {
+                    BinaryOperator::Add => self.writeln(&format!("\tadd {destination}, {source}")),
+                    BinaryOperator::Substract => {
+                        self.writeln(&format!("\tsub {destination}, {source}"));
+                    }
+                    BinaryOperator::Multiply => {
+                        self.writeln(&format!("\timul {destination}, {source}"));
+                    }
+                }
+            }
+            Instruction::Division(operand) => self.writeln(&format!("\tidiv {operand}")),
+            // Sign extends from EAX to EDX:EAX
+            Instruction::SignExtension => self.writeln("\tcdq"),
             Instruction::AllocateStack(int) => self.writeln(&format!("\tsub rsp, {int}")),
+            Instruction::Return => {
+                self.writeln("\tmov rsp, rbp");
+                self.writeln("\tpop rbp");
+                self.writeln("\tret");
+            }
         }
     }
 
@@ -81,7 +103,9 @@ impl Emitter {
             // For now maps to 32bit registers
             Operand::Register(register) => match register {
                 Register::AX => "eax".to_string(),
+                Register::DX => "edx".to_string(),
                 Register::R10 => "r10d".to_string(),
+                Register::R11 => "r11d".to_string(),
             },
             Operand::PseudoRegister(_) => {
                 panic!("PSEUDO REGISTER IN EMITTER!!!")

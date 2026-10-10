@@ -16,6 +16,7 @@ impl PtacGenerator {
         }
     }
 
+    #[must_use]
     pub fn generate(mut self) -> ptac::Program {
         // Now the borrow checker is happier, but a better solution would be to PtacGenerator to not own the ast and instead pass it to generate
         let items = std::mem::take(&mut self.ast.items);
@@ -78,11 +79,30 @@ impl PtacGenerator {
             } => {
                 let source = self.lower_expression(expression);
                 let destination = self.new_temp();
-                let operator = self.lower_unary_operator(operator.clone());
+                let operator = Self::lower_unary_operator(*operator);
 
                 self.emit(ptac::Instruction::Unary {
                     operator,
                     source,
+                    destination: destination.clone(),
+                });
+
+                destination
+            }
+            ast::Expression::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                let lhs = self.lower_expression(left);
+                let rhs = self.lower_expression(right);
+                let destination = self.new_temp();
+                let operator = Self::lower_binary_operator(*operator);
+
+                self.emit(ptac::Instruction::Binary {
+                    operator,
+                    source1: lhs,
+                    source2: rhs,
                     destination: destination.clone(),
                 });
 
@@ -121,9 +141,19 @@ impl PtacGenerator {
         matches!(self.instructions.last(), Some(ptac::Instruction::Return(_)))
     }
 
-    const fn lower_unary_operator(&self, op: ast::UnaryOperator) -> ptac::UnaryOperator {
+    const fn lower_unary_operator(op: ast::UnaryOperator) -> ptac::UnaryOperator {
         match op {
             ast::UnaryOperator::Negation => ptac::UnaryOperator::Negation,
+        }
+    }
+
+    const fn lower_binary_operator(op: ast::BinaryOperator) -> ptac::BinaryOperator {
+        match op {
+            ast::BinaryOperator::Add => ptac::BinaryOperator::Add,
+            ast::BinaryOperator::Subtract => ptac::BinaryOperator::Subtract,
+            ast::BinaryOperator::Multiply => ptac::BinaryOperator::Multiply,
+            ast::BinaryOperator::Divide => ptac::BinaryOperator::Divide,
+            ast::BinaryOperator::Remainder => ptac::BinaryOperator::Remainder,
         }
     }
 }
