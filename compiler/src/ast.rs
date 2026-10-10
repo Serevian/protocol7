@@ -32,6 +32,10 @@ pub enum Statement {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
+    Unary {
+        operator: UnaryOperator,
+        expression: Box<Expression>,
+    },
     Return(Option<Box<Expression>>),
 }
 
@@ -43,4 +47,9 @@ pub enum Literal {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Named(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryOperator {
+    Negation, // -
 }

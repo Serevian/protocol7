@@ -32,7 +32,7 @@ impl Parser {
         }
     }
 
-    // <function> ::= "fun" <identifier> "(" ")" [ "->" "i32" ] "{" <block> "}"
+    // <function> ::= "fun" <identifier> "(" ")" [ "->" <type> ] "{" <block> "}"
     fn parse_function(&mut self) -> Result<Function, String> {
         self.expect(&TokenKind::Fun)?;
 
@@ -65,6 +65,13 @@ impl Parser {
         })
     }
 
+    fn parse_type(&mut self) -> Result<Type, String> {
+        match self.advance().kind.clone() {
+            TokenKind::Identifier(name) => Ok(Type::Named(name)),
+            other => Err(format!("Expected type name, found {:?}", other)),
+        }
+    }
+
     fn parse_block(&mut self) -> Result<Block, String> {
         self.expect(&TokenKind::OpenBrace)?;
         self.skip_newlines();
@@ -95,23 +102,45 @@ impl Parser {
         })
     }
 
-    // Change later to a pratt parser
+    // Lowest precedence, return, break, continue, etc
     fn parse_expression(&mut self) -> Result<Expression, String> {
+        if self.match_token(&TokenKind::Return) {
+            if self.check(&TokenKind::Newline)
+                || self.check(&TokenKind::CloseBrace)
+                || self.is_at_end()
+            {
+                return Ok(Expression::Return(None));
+            } else {
+                let expression = self.parse_expression()?;
+                return Ok(Expression::Return(Some(Box::new(expression))));
+            }
+        }
+
+        self.parse_unary()
+    }
+
+    fn parse_unary(&mut self) -> Result<Expression, String> {
+        if self.match_token(&TokenKind::Minus) {
+            let inner = self.parse_unary()?;
+            return Ok(Expression::Unary {
+                operator: UnaryOperator::Negation,
+                expression: Box::new(inner),
+            });
+        }
+
+        self.parse_primary()
+    }
+
+    fn parse_primary(&mut self) -> Result<Expression, String> {
         let token = self.advance().clone();
         match token.kind {
             TokenKind::IntLiteral(num) => Ok(Expression::Literal(Literal::Int(num))),
-            TokenKind::Return => {
-                let expression = self.parse_expression()?;
-                Ok(Expression::Return(Some(Box::new(expression))))
+            TokenKind::OpenParen => {
+                let inner = self.parse_expression()?;
+                self.expect(&TokenKind::CloseParen)?;
+                Ok(inner)
             }
             other => Err(format!("Expected expression, found {other:?}")),
-        }
-    }
-
-    fn parse_type(&mut self) -> Result<Type, String> {
-        match self.advance().kind.clone() {
-            TokenKind::Identifier(name) => Ok(Type::Named(name)),
-            other => Err(format!("Expected type name, found {:?}", other)),
         }
     }
 

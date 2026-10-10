@@ -80,6 +80,10 @@ impl AssemblyGenerator {
                 }
                 instructions.push(assembly_ast::Instruction::Ret);
             }
+            ast::Expression::Unary {
+                operator,
+                expression,
+            } => todo!(),
         }
     }
 }
