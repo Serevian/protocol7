@@ -89,12 +89,18 @@ impl PtacGenerator {
                 destination
             }
             ast::Expression::Return(expression) => {
-                let return_value = expression
-                    .as_ref()
-                    .map(|inner| self.lower_expression(inner));
-                self.emit(ptac::Instruction::Return(return_value));
-
-                // Return expression diverges, so its value is never read
+                match expression {
+                    // return <expr>
+                    Some(value_expression) => {
+                        let value = self.lower_expression(value_expression);
+                        self.emit(ptac::Instruction::Return(Some(value)));
+                    }
+                    // return
+                    None => {
+                        self.emit(ptac::Instruction::Return(None));
+                    }
+                }
+                // Return expression diverges, so its value is never read. Perhaps make a Never type?
                 ptac::Value::Constant(0)
             }
         }

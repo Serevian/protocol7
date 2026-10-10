@@ -52,8 +52,15 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let mut generator = aast_generator::AssemblyGenerator::new(ast);
-    let asm_ast = generator.generate();
+    let ptac_generator = ptac_generator::PtacGenerator::new(ast);
+    let ptac = ptac_generator.generate();
+    if args.ptac {
+        println!("{:#?}", ptac);
+        return Ok(());
+    }
+
+    let mut assembly_generator = aast_generator::AssemblyGenerator::new(ptac);
+    let asm_ast = assembly_generator.generate();
     if args.codegen {
         println!("{:#?}", asm_ast);
         return Ok(());

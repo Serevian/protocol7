@@ -98,8 +98,11 @@ fn run_test(file_path: &Path) -> Result<i32, String> {
     let mut parser = p7c::parser::Parser::new(tokens);
     let ast = parser.parse().map_err(|e| format!("Parser Error: {e}"))?;
 
-    let mut generator = p7c::aast_generator::AssemblyGenerator::new(ast);
-    let asm_ast = generator.generate();
+    let ptac_generator = p7c::ptac_generator::PtacGenerator::new(ast);
+    let ptac = ptac_generator.generate();
+
+    let mut assembly_generator = p7c::aast_generator::AssemblyGenerator::new(ptac);
+    let asm_ast = assembly_generator.generate();
 
     let asm_text = p7c::emitter::Emitter::new().emit_program(&asm_ast);
 

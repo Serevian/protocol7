@@ -1,4 +1,4 @@
-use crate::aast::{Function, Instruction, Operand, Program};
+use crate::aast::{Function, Instruction, Operand, Program, Register, UnaryOperator};
 
 pub struct Emitter {
     output: String,
@@ -37,6 +37,8 @@ impl Emitter {
 
         self.writeln(&format!(".globl {name}"));
         self.writeln(&format!("{name}:"));
+        self.writeln("\tpush rbp");
+        self.writeln("\tmov rbp, rsp");
 
         for inst in &function.instructions {
             self.emit_instruction(inst);
@@ -53,15 +55,44 @@ impl Emitter {
                 let source_str = Self::format_operand(source);
                 self.writeln(&format!("\tmov {destination_str}, {source_str}"));
             }
-            Instruction::Ret => self.writeln("\tret"),
+            Instruction::Ret => {
+                self.writeln("\tmov rsp, rbp");
+                self.writeln("\tpop rbp");
+                self.writeln("\tret");
+            }
+            Instruction::Unary { operator, operand } => {
+                let operand = Self::format_operand(operand);
+                match operator {
+                    UnaryOperator::Negation => {
+                        self.writeln(&format!("\tneg {operand}"));
+                    }
+                    UnaryOperator::Not => {
+                        self.writeln(&format!("\tnot {operand}"));
+                    }
+                }
+            }
+            Instruction::AllocateStack(int) => self.writeln(&format!("\tsub rsp, {int}")),
         }
     }
 
     fn format_operand(operand: &Operand) -> String {
         match operand {
             Operand::Immediate(n) => n.to_string(),
-            // For now maps to the 32-bit return register `eax`
-            Operand::Register => "eax".to_string(),
+            // For now maps to 32bit registers
+            Operand::Register(register) => match register {
+                Register::AX => "eax".to_string(),
+                Register::R10 => "r10d".to_string(),
+            },
+            Operand::PseudoRegister(_) => {
+                panic!("PSEUDO REGISTER IN EMITTER!!!")
+            }
+            Operand::Stack(offset) => {
+                if *offset < 0 {
+                    format!("DWORD PTR [rbp - {}]", offset.abs())
+                } else {
+                    format!("DWORD PTR [rbp + {offset}]")
+                }
+            }
         }
     }
 
