@@ -1,0 +1,84 @@
+// EXIT: 0
+
+enum AppError {
+    InvalidId
+    Corrupted
+}
+
+struct User {
+    id: i32
+    raw_flags: i32
+    nickname: String?
+}
+
+fun duplicate<T>(val: &T) -> T
+where T: Copy
+{
+    // Dereferencing / copying a borrowed value
+    *val
+}
+
+fun parse_user(id: i32, flags: i32) throws AppError -> User? {
+    if id <= 0 or not flags != 0 {
+        throw AppError.InvalidId
+    }
+
+    if id == 999 {
+        Absence, not failure
+        return None
+    }
+
+    // Bitwise math as methods
+    // raw_flags: (flags & 0x0F) << 2 | 1
+    let masked_flags = flags.and(0x0F).shl(2).or(1)
+
+    // Tail implicit return of the created User
+    User {
+        id: id
+        raw_flags: masked_flags
+        nickname: "Ada"
+    }
+}
+
+fun get_access_level(user: &User) -> i32 {
+    // Pattern matching uses `|` for alternatives
+    match user.id {
+        1 | 2 => 100
+        10 | 20 => 50
+        _ => 10
+    }
+}
+
+fun main() throws AppError -> i32 {
+    // Prefix `try` propagates errors (Result value semantics under the hood)
+    let maybe_user: User? = try parse_user(10, 3)
+
+    // Optional Safe Navigation `?.` and `orelse` fallback
+    let nickname = maybe_user?.nickname orelse "Guest"
+
+    // Force unwrap `!` (panics if None)
+    let user_id = maybe_user!.id
+
+    let access = get_access_level(&maybe_user!)
+
+    // Closures
+    let compute_bonus = |base: i32| base * 2 + 5
+    let bonus = compute_bonus(access) // 50 * 2 + 5 = 105
+
+    let cloned_id = duplicate(&user_id)
+
+    let total_score = user_id +
+                      maybe_user!.raw_flags +
+                      bonus
+
+
+    let is_valid = total_score == 128 and
+                   cloned_id == 10 and
+                   not (nickname == "Guest")
+
+    if is_valid and (access == 50 or user_id == 0) {
+        0 // Tail implicit return
+    } else {
+        1
+    }
+}

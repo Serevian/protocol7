@@ -1,0 +1,9 @@
+// EXIT: 251
+// If the parser mistakenly merged lines: 100 - 5 = 95 (Exit code: 95)
+// Under correct rules:
+// - Line 1: `100` is evaluated and discarded.
+// - Line 2: `- 5` is the tail return (evaluates to -5 -> exit code 251).
+fun main() -> i32 {
+    100
+    - 5
+}
