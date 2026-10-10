@@ -22,6 +22,9 @@ struct Driver {
     parse: bool,
 
     #[arg(long)]
+    ptac: bool,
+
+    #[arg(long)]
     codegen: bool,
 
     #[arg(short = 'S', long)]
@@ -49,7 +52,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let mut generator = assembly_generator::AssemblyGenerator::new(ast);
+    let mut generator = aast_generator::AssemblyGenerator::new(ast);
     let asm_ast = generator.generate();
     if args.codegen {
         println!("{:#?}", asm_ast);
