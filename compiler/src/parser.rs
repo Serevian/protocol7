@@ -72,14 +72,14 @@ impl Parser {
         let mut statements = Vec::new();
         let mut tail_expression = None;
 
-        while !self.check(&TokenKind::CloseParen) && !self.is_at_end() {
+        while !self.check(&TokenKind::CloseBrace) && !self.is_at_end() {
             // Parse statements (variable declaration)
 
             // Otherwise it's an expression
             let expression = self.parse_expression()?;
             self.skip_newlines();
 
-            // If the next token is a "{", then it's the tail expression return
+            // If the next token is a "}", then it's the tail expression return
             if self.check(&TokenKind::CloseBrace) {
                 tail_expression = Some(Box::new(expression));
                 break;
