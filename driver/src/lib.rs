@@ -17,19 +17,19 @@ pub struct Driver {
     output: Option<PathBuf>,
 
     #[arg(long)]
-    lex_table: bool,
+    emit_lex_table: bool,
 
     #[arg(long)]
-    lex_lines: bool,
+    emit_lex_lines: bool,
 
     #[arg(long)]
-    parse: bool,
+    emit_parser: bool,
 
     #[arg(long)]
-    ptac: bool,
+    emit_ptac: bool,
 
     #[arg(long)]
-    codegen: bool,
+    emit_aast: bool,
 
     #[arg(short = 'S', long)]
     emit_asm: bool,
@@ -37,7 +37,12 @@ pub struct Driver {
 
 impl Driver {
     pub fn stops_early(&self) -> bool {
-        self.lex_table || self.lex_lines || self.parse || self.ptac || self.codegen || self.emit_asm
+        self.emit_lex_table
+            || self.emit_lex_lines
+            || self.emit_parser
+            || self.emit_ptac
+            || self.emit_aast
+            || self.emit_asm
     }
 }
 
@@ -46,12 +51,12 @@ pub fn run(args: &Driver, out: &mut dyn Write) -> Result<()> {
         .with_context(|| format!("Could not read input file: {}", args.input.display()))?;
 
     let tokens = lexer::Lexer::new(&source).tokenize();
-    if args.lex_table {
+    if args.emit_lex_table {
         let string = token::format_token_table(&tokens);
         writeln!(out, "{string}")?;
         return Ok(());
     }
-    if args.lex_lines {
+    if args.emit_lex_lines {
         let string = token::format_token_lines(&tokens);
         writeln!(out, "{string}")?;
         return Ok(());
@@ -61,21 +66,21 @@ pub fn run(args: &Driver, out: &mut dyn Write) -> Result<()> {
     let ast = parser
         .parse()
         .map_err(|err| anyhow::anyhow!("Parse Error: {err}"))?;
-    if args.parse {
+    if args.emit_parser {
         writeln!(out, "{}", ast.dump_tree())?;
         return Ok(());
     }
 
     let ptac_generator = ptac_generator::PtacGenerator::new(ast);
     let ptac = ptac_generator.generate();
-    if args.ptac {
+    if args.emit_ptac {
         writeln!(out, "{}", ptac)?;
         return Ok(());
     }
 
     let mut assembly_generator = aast_generator::AssemblyGenerator::new(ptac);
     let asm_ast = assembly_generator.generate();
-    if args.codegen {
+    if args.emit_aast {
         writeln!(out, "{}", asm_ast)?;
         return Ok(());
     }
