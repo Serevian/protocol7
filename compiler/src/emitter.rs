@@ -89,9 +89,14 @@ impl Emitter {
                 destination,
                 source,
             } => {
+                let destination = Self::format_operand(destination);
+                let source = Self::format_operand(source);
                 self.writeln(&format!("\tcmp {destination}, {source}"));
             }
-            Instruction::Division(operand) => self.writeln(&format!("\tidiv {operand}")),
+            Instruction::Division(operand) => {
+                let operand = Self::format_operand(operand);
+                self.writeln(&format!("\tidiv {operand}"));
+            }
             // Sign extends from EAX to EDX:EAX
             Instruction::SignExtension => self.writeln("\tcdq"),
             Instruction::AllocateStack(int) => self.writeln(&format!("\tsub rsp, {int}")),
@@ -126,7 +131,6 @@ impl Emitter {
     fn format_operand(operand: &Operand) -> String {
         match operand {
             Operand::Immediate(n) => n.to_string(),
-            // For now maps to 32bit registers
             Operand::Register(register) => match register {
                 Register::AX => "eax".to_string(),
                 Register::DX => "edx".to_string(),
@@ -149,7 +153,6 @@ impl Emitter {
     fn format_byte_operand(operand: &Operand) -> String {
         match operand {
             Operand::Immediate(n) => n.to_string(),
-            // For now maps to 32bit registers
             Operand::Register(register) => match register {
                 Register::AX => "ax".to_string(),
                 Register::DX => "dx".to_string(),

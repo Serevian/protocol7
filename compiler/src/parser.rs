@@ -149,12 +149,11 @@ impl Parser {
             let rhs = self.parse_expression_climbing(next_min_precedence)?;
 
             // If the next token is another of association none, reject it
-            if association == Association::None {
-                if let Some((next_precedence, _, _)) = Self::binary_op_info(self.peek()) {
-                    if next_precedence == precedence {
-                        return Err("Comparison operators can't be chained".to_string());
-                    }
-                }
+            if association == Association::None
+                && let Some((next_precedence, _, _)) = Self::binary_op_info(self.peek())
+                && next_precedence == precedence
+            {
+                return Err("Comparison operators can't be chained".to_string());
             }
 
             lhs = Expression::Binary {
