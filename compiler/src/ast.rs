@@ -59,6 +59,7 @@ pub enum Type {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOperator {
     Negation, // -
+    Not,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,6 +69,14 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Remainder,
+    And,
+    Or,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
 }
 
 struct Node {

@@ -137,16 +137,25 @@ impl Parser {
 
             // Consume operator
             self.advance();
-
             // Now that it has consumed the operator, it can skip newlines
             self.skip_newlines();
 
             let next_min_precedence = match association {
-                Association::Left => precedence + 1,
+                // For non-association, raise so chained comparisons will error
+                Association::Left | Association::None => precedence + 1,
                 Association::Right => precedence,
             };
 
             let rhs = self.parse_expression_climbing(next_min_precedence)?;
+
+            // If the next token is another of association none, reject it
+            if association == Association::None {
+                if let Some((next_precedence, _, _)) = Self::binary_op_info(self.peek()) {
+                    if next_precedence == precedence {
+                        return Err("Comparison operators can't be chained".to_string());
+                    }
+                }
+            }
 
             lhs = Expression::Binary {
                 left: Box::new(lhs),
@@ -160,14 +169,28 @@ impl Parser {
 
     const fn binary_op_info(kind: &TokenKind) -> Option<(u8, Association, BinaryOperator)> {
         match kind {
-            // Precedence 1 (Left-Associative)
-            TokenKind::Plus => Some((1, Association::Left, BinaryOperator::Add)),
-            TokenKind::Minus => Some((1, Association::Left, BinaryOperator::Subtract)),
+            // Level 1
+            TokenKind::Or => Some((1, Association::Left, BinaryOperator::Or)),
 
-            // Precedence 2 (Higher Precedence)
-            TokenKind::Star => Some((2, Association::Left, BinaryOperator::Multiply)),
-            TokenKind::Slash => Some((2, Association::Left, BinaryOperator::Divide)),
-            TokenKind::Percent => Some((2, Association::Left, BinaryOperator::Remainder)),
+            // Level 2
+            TokenKind::And => Some((2, Association::Left, BinaryOperator::And)),
+
+            // Level 3 (Non-Associative)
+            TokenKind::Equal => Some((3, Association::None, BinaryOperator::Equal)),
+            TokenKind::NotEqual => Some((3, Association::None, BinaryOperator::NotEqual)),
+            TokenKind::Less => Some((3, Association::None, BinaryOperator::Less)),
+            TokenKind::LessEqual => Some((3, Association::None, BinaryOperator::LessEqual)),
+            TokenKind::Greater => Some((3, Association::None, BinaryOperator::Greater)),
+            TokenKind::GreaterEqual => Some((3, Association::None, BinaryOperator::GreaterEqual)),
+
+            // Level 4
+            TokenKind::Plus => Some((4, Association::Left, BinaryOperator::Add)),
+            TokenKind::Minus => Some((4, Association::Left, BinaryOperator::Subtract)),
+
+            // Level 5
+            TokenKind::Star => Some((5, Association::Left, BinaryOperator::Multiply)),
+            TokenKind::Slash => Some((5, Association::Left, BinaryOperator::Divide)),
+            TokenKind::Percent => Some((5, Association::Left, BinaryOperator::Remainder)),
 
             _ => None,
         }
@@ -178,6 +201,13 @@ impl Parser {
             let inner = self.parse_unary()?;
             return Ok(Expression::Unary {
                 operator: UnaryOperator::Negation,
+                expression: Box::new(inner),
+            });
+        }
+        if self.match_token(&TokenKind::Not) {
+            let inner = self.parse_unary()?;
+            return Ok(Expression::Unary {
+                operator: UnaryOperator::Not,
                 expression: Box::new(inner),
             });
         }
@@ -247,4 +277,5 @@ impl Parser {
 pub enum Association {
     Left,
     Right, // Still don't have any right association operators
+    None,
 }

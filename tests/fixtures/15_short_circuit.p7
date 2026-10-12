@@ -1,0 +1,12 @@
+// EXIT: 10
+fun main() -> i32 {
+    // Must short-circuit and return 0
+    (0 and (1 / 0)) +
+
+    // Must short-circuit and return 1
+    (1 or (1 / 0)) * 2 +
+
+    // Normal truth evaluation
+    (1 and 1) * 8 +
+    (0 or 0) * 16
+}

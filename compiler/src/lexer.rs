@@ -25,6 +25,20 @@ impl Lexer {
             let token = match ch {
                 'a'..='z' | 'A'..='Z' => self.identifier_or_keyword(ch),
                 '0'..='9' => self.number(ch),
+                '=' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::Equal)
+                    }
+                    _ => Token::new(TokenKind::Error(ch.to_string())),
+                },
+                '!' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::NotEqual)
+                    }
+                    _ => Token::new(TokenKind::Error(ch.to_string())),
+                },
                 '+' => Token::new(TokenKind::Plus),
                 '-' => match self.peek() {
                     Some('>') => {
@@ -50,6 +64,20 @@ impl Lexer {
                     _ => Token::new(TokenKind::Slash),
                 },
                 '%' => Token::new(TokenKind::Percent),
+                '<' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::LessEqual)
+                    }
+                    _ => Token::new(TokenKind::Less),
+                },
+                '>' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::GreaterEqual)
+                    }
+                    _ => Token::new(TokenKind::Greater),
+                },
                 '(' => Token::new(TokenKind::OpenParen),
                 ')' => Token::new(TokenKind::CloseParen),
                 '{' => Token::new(TokenKind::OpenBrace),
@@ -92,6 +120,9 @@ impl Lexer {
         let kind = match identifier.as_str() {
             "fun" => TokenKind::Fun,
             "return" => TokenKind::Return,
+            "and" => TokenKind::And,
+            "or" => TokenKind::Or,
+            "not" => TokenKind::Not,
             _ => TokenKind::Identifier(identifier),
         };
 

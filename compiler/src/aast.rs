@@ -24,8 +24,22 @@ pub enum Instruction {
         source: Operand,
         destination: Operand,
     },
+    Comparison {
+        destination: Operand,
+        source: Operand,
+    },
     Division(Operand),
     SignExtension, // CD
+    Jump(String),
+    JumpOnCondition {
+        condition: Condition,
+        identifier: String,
+    },
+    SetOnCondition {
+        condition: Condition,
+        operand: Operand,
+    },
+    Label(String),
     AllocateStack(i64),
     Return,
 }
@@ -49,6 +63,16 @@ pub enum Operand {
     Register(Register),
     PseudoRegister(String),
     Stack(i64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Condition {
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,7 +125,20 @@ impl fmt::Display for Instruction {
                 source,
                 destination,
             } => write!(f, "{operator} {destination}, {source}"),
-            Self::Division(operand) => write!(f, "idivl {operand}"),
+            Self::Comparison {
+                destination: source1,
+                source: source2,
+            } => write!(f, "cmp {source1}, {source2}"),
+            Self::Division(operand) => write!(f, "idiv {operand}"),
+            Self::Jump(str) => write!(f, "jmp #{str}"),
+            Self::JumpOnCondition {
+                condition,
+                identifier,
+            } => write!(f, "j{condition} #{identifier}"),
+            Self::SetOnCondition { condition, operand } => {
+                write!(f, "set{condition} #{operand}")
+            }
+            Self::Label(str) => write!(f, "#{str}:"),
             Self::SignExtension => write!(f, "cd"),
             Self::AllocateStack(bytes) => write!(f, "sub rsp, {bytes}"),
             Self::Return => write!(f, "ret"),
@@ -135,9 +172,21 @@ impl fmt::Display for Operand {
             Self::Register(register) => write!(f, "{register}"),
             // Should be gone after pseudo-register replacement; `%` makes leaks obvious
             Self::PseudoRegister(name) => write!(f, "%{name}"),
-            Self::Stack(0) => write!(f, "DWORD PTR [rbp]"),
-            // `{:+}` always prints the sign: [rbp-4] / [rbp+8]
-            Self::Stack(offset) => write!(f, "DWORD PTR [rbp{offset:+}]"),
+            // `{:+}` always prints the sign: [-4] / [+8]
+            Self::Stack(offset) => write!(f, "Stack({offset:+})"),
+        }
+    }
+}
+
+impl fmt::Display for Condition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Equal => write!(f, "e"),
+            Self::NotEqual => write!(f, "ne"),
+            Self::Less => write!(f, "l"),
+            Self::LessEqual => write!(f, "le"),
+            Self::Greater => write!(f, "g"),
+            Self::GreaterEqual => write!(f, "ge"),
         }
     }
 }

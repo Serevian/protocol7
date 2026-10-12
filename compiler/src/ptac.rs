@@ -23,12 +23,29 @@ pub enum Instruction {
         source2: Value,
         destination: Value,
     },
+    Copy {
+        source: Value,
+        destination: Value,
+    },
+    Jump {
+        target: String,
+    },
+    JumpIfZero {
+        condition: Value,
+        target: String,
+    },
+    JumpIfNotZero {
+        condition: Value,
+        target: String,
+    },
+    Label(String),
     Return(Option<Value>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOperator {
     Negation,
+    Not,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +55,12 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Remainder,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,7 +113,19 @@ impl fmt::Display for Instruction {
             } => {
                 write!(f, "{destination} = {source1} {operator} {source2}")
             }
+            Self::Copy {
+                source,
+                destination,
+            } => write!(f, "{destination} = {source}"),
             Self::Return(None) => write!(f, "return"),
+            Self::Jump { target } => write!(f, "jump #{target}"),
+            Self::JumpIfZero { condition, target } => {
+                write!(f, "jump if {condition} is zero to #{target}")
+            }
+            Self::JumpIfNotZero { condition, target } => {
+                write!(f, "jump if {condition} not zero to #{target}")
+            }
+            Self::Label(str) => write!(f, "#{str}:"),
             Self::Return(Some(value)) => write!(f, "return {value}"),
         }
     }
@@ -100,6 +135,7 @@ impl fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Negation => write!(f, "-"),
+            Self::Not => write!(f, "!"),
         }
     }
 }
@@ -112,6 +148,12 @@ impl fmt::Display for BinaryOperator {
             Self::Multiply => write!(f, "*"),
             Self::Divide => write!(f, "/"),
             Self::Remainder => write!(f, "%"),
+            Self::Equal => write!(f, "=="),
+            Self::NotEqual => write!(f, "!="),
+            Self::Less => write!(f, "<"),
+            Self::LessEqual => write!(f, "<="),
+            Self::Greater => write!(f, ">"),
+            Self::GreaterEqual => write!(f, ">="),
         }
     }
 }

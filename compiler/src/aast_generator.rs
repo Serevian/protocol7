@@ -56,9 +56,10 @@ impl AssemblyGenerator {
                 source,
                 destination,
             } => {
+                let source = Self::lower_value(source);
                 let destination = Self::lower_value(destination);
                 instructions.push(aast::Instruction::Move {
-                    source: Self::lower_value(source),
+                    source: source.clone(),
                     destination: destination.clone(),
                 });
                 match operator {
@@ -68,20 +69,22 @@ impl AssemblyGenerator {
                             operand: destination,
                         });
                     }
+                    ptac::UnaryOperator::Not => {
+                        instructions.push(aast::Instruction::Comparison {
+                            destination: aast::Operand::Immediate(0),
+                            source,
+                        });
+                        instructions.push(aast::Instruction::Move {
+                            source: aast::Operand::Immediate(0),
+                            destination: destination.clone(),
+                        });
+                        instructions.push(aast::Instruction::SetOnCondition {
+                            condition: aast::Condition::Equal,
+                            operand: destination,
+                        });
+                    }
                 }
             }
-            ptac::Instruction::Return(value) => match value {
-                Some(v) => {
-                    instructions.push(aast::Instruction::Move {
-                        source: Self::lower_value(v),
-                        destination: aast::Operand::Register(aast::Register::AX),
-                    });
-                    instructions.push(aast::Instruction::Return);
-                }
-                None => {
-                    instructions.push(aast::Instruction::Return);
-                }
-            },
             ptac::Instruction::Binary {
                 operator,
                 source1,
@@ -147,8 +150,89 @@ impl AssemblyGenerator {
                             _ => {}
                         }
                     }
+                    ptac::BinaryOperator::Equal
+                    | ptac::BinaryOperator::NotEqual
+                    | ptac::BinaryOperator::Less
+                    | ptac::BinaryOperator::LessEqual
+                    | ptac::BinaryOperator::Greater
+                    | ptac::BinaryOperator::GreaterEqual => {
+                        instructions.push(aast::Instruction::Comparison {
+                            destination: source1,
+                            source: source2,
+                        });
+                        instructions.push(aast::Instruction::Move {
+                            source: aast::Operand::Immediate(0),
+                            destination: destination.clone(),
+                        });
+                        let condition = match operator {
+                            ptac::BinaryOperator::Equal => aast::Condition::Equal,
+                            ptac::BinaryOperator::NotEqual => aast::Condition::NotEqual,
+                            ptac::BinaryOperator::Less => aast::Condition::Less,
+                            ptac::BinaryOperator::LessEqual => aast::Condition::LessEqual,
+                            ptac::BinaryOperator::Greater => aast::Condition::Greater,
+                            ptac::BinaryOperator::GreaterEqual => aast::Condition::GreaterEqual,
+                            _ => unreachable!("Impossible to reach here"),
+                        };
+                        instructions.push(aast::Instruction::SetOnCondition {
+                            condition,
+                            operand: destination,
+                        });
+                    }
                 }
             }
+            ptac::Instruction::Copy {
+                source,
+                destination,
+            } => {
+                let source = Self::lower_value(source);
+                let destination = Self::lower_value(destination);
+                instructions.push(aast::Instruction::Move {
+                    source,
+                    destination,
+                });
+            }
+            ptac::Instruction::Jump { target } => {
+                instructions.push(aast::Instruction::Jump(target.clone()));
+            }
+            ptac::Instruction::JumpIfZero { condition, target }
+            | ptac::Instruction::JumpIfNotZero { condition, target } => {
+                let condition = Self::lower_value(condition);
+                instructions.push(aast::Instruction::Comparison {
+                    destination: aast::Operand::Immediate(0),
+                    source: condition,
+                });
+                let conditional_jump = match instruction {
+                    ptac::Instruction::JumpIfZero {
+                        condition: _,
+                        target: _,
+                    } => aast::Condition::Equal,
+                    ptac::Instruction::JumpIfNotZero {
+                        condition: _,
+                        target: _,
+                    } => aast::Condition::NotEqual,
+                    _ => unreachable!("Conditional jump can only be JumpIfZero and JumpIfNotZero"),
+                };
+                instructions.push(aast::Instruction::JumpOnCondition {
+                    condition: conditional_jump,
+                    identifier: target.clone(),
+                });
+            }
+
+            ptac::Instruction::Label(identifier) => {
+                instructions.push(aast::Instruction::Label(identifier.clone()));
+            }
+            ptac::Instruction::Return(value) => match value {
+                Some(v) => {
+                    instructions.push(aast::Instruction::Move {
+                        source: Self::lower_value(v),
+                        destination: aast::Operand::Register(aast::Register::AX),
+                    });
+                    instructions.push(aast::Instruction::Return);
+                }
+                None => {
+                    instructions.push(aast::Instruction::Return);
+                }
+            },
         }
     }
 
@@ -182,10 +266,29 @@ impl AssemblyGenerator {
                     Self::replace_operand(source, &mut stack_map, &mut current_offset);
                     Self::replace_operand(destination, &mut stack_map, &mut current_offset);
                 }
-                aast::Instruction::Division(operand) => {
+                aast::Instruction::Division(operand)
+                | aast::Instruction::SetOnCondition {
+                    condition: _,
+                    operand,
+                } => {
                     Self::replace_operand(operand, &mut stack_map, &mut current_offset);
                 }
-                _ => {}
+                aast::Instruction::Comparison {
+                    destination: source1,
+                    source: source2,
+                } => {
+                    Self::replace_operand(source1, &mut stack_map, &mut current_offset);
+                    Self::replace_operand(source2, &mut stack_map, &mut current_offset);
+                }
+                aast::Instruction::SignExtension
+                | aast::Instruction::Jump(_)
+                | aast::Instruction::JumpOnCondition {
+                    condition: _,
+                    identifier: _,
+                }
+                | aast::Instruction::Label(_)
+                | aast::Instruction::AllocateStack(_)
+                | aast::Instruction::Return => {}
             }
         }
 
@@ -274,6 +377,36 @@ impl AssemblyGenerator {
                         unreachable!("handled by the Multiply arm above")
                     }
                 },
+                aast::Instruction::Comparison {
+                    destination,
+                    source,
+                } => {
+                    let mut dst = destination;
+                    let src = source;
+
+                    // Destination  cannot be an Immediate. Move it to R11.
+                    if let aast::Operand::Immediate(n) = dst {
+                        fixed.push(aast::Instruction::Move {
+                            source: aast::Operand::Immediate(n),
+                            destination: aast::Operand::Register(aast::Register::R11),
+                        });
+                        dst = aast::Operand::Register(aast::Register::R11);
+                    }
+                    // Rule 2: Both operands cannot be memory (Stack) locations. Move source1 to R10.
+                    if let (aast::Operand::Stack(_), aast::Operand::Stack(_)) = (&dst, &src) {
+                        let original_s1 = dst;
+                        fixed.push(aast::Instruction::Move {
+                            source: original_s1,
+                            destination: aast::Operand::Register(aast::Register::R10),
+                        });
+                        dst = aast::Operand::Register(aast::Register::R10);
+                    }
+
+                    fixed.push(aast::Instruction::Comparison {
+                        destination: dst,
+                        source: src,
+                    });
+                }
                 aast::Instruction::Division(operand) => {
                     if let Immediate(_) = operand {
                         fixed.push(aast::Instruction::Move {

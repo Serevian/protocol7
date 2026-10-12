@@ -85,10 +85,36 @@ impl Emitter {
                     }
                 }
             }
+            Instruction::Comparison {
+                destination,
+                source,
+            } => {
+                self.writeln(&format!("\tcmp {destination}, {source}"));
+            }
             Instruction::Division(operand) => self.writeln(&format!("\tidiv {operand}")),
             // Sign extends from EAX to EDX:EAX
             Instruction::SignExtension => self.writeln("\tcdq"),
             Instruction::AllocateStack(int) => self.writeln(&format!("\tsub rsp, {int}")),
+            Instruction::Jump(label) => {
+                let label = Self::format_label(label);
+                self.writeln(&format!("\tjmp {label}"));
+            }
+            Instruction::JumpOnCondition {
+                condition,
+                identifier,
+            } => {
+                let label = Self::format_label(identifier);
+                self.writeln(&format!("\tj{condition} {label}"));
+            }
+            Instruction::SetOnCondition { condition, operand } => {
+                // Set instructions write to one byte registers
+                let operand = Self::format_byte_operand(operand);
+                self.writeln(&format!("\tset{condition} {operand}"));
+            }
+            Instruction::Label(label) => {
+                let label = Self::format_label(label);
+                self.writeln(&format!("\t{label}:"));
+            }
             Instruction::Return => {
                 self.writeln("\tmov rsp, rbp");
                 self.writeln("\tpop rbp");
@@ -118,6 +144,39 @@ impl Emitter {
                 }
             }
         }
+    }
+
+    fn format_byte_operand(operand: &Operand) -> String {
+        match operand {
+            Operand::Immediate(n) => n.to_string(),
+            // For now maps to 32bit registers
+            Operand::Register(register) => match register {
+                Register::AX => "ax".to_string(),
+                Register::DX => "dx".to_string(),
+                Register::R10 => "r10b".to_string(),
+                Register::R11 => "r11b".to_string(),
+            },
+            Operand::PseudoRegister(_) => {
+                panic!("PSEUDO REGISTER IN EMITTER!!!")
+            }
+            Operand::Stack(offset) => {
+                if *offset < 0 {
+                    format!("BYTE PTR [rbp - {}]", offset.abs())
+                } else {
+                    format!("BYTE PTR [rbp + {offset}]")
+                }
+            }
+        }
+    }
+
+    fn format_label(label: &str) -> String {
+        if cfg!(target_os = "macos") {
+            return format!("L{label}");
+        } else if cfg!(target_os = "linux") {
+            return format!(".L{label}");
+        }
+
+        label.to_string()
     }
 
     fn writeln(&mut self, line: &str) {

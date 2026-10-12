@@ -4,6 +4,7 @@ pub struct PtacGenerator {
     ast: ast::Program,
     instructions: Vec<ptac::Instruction>,
     temp_counter: usize,
+    label_counter: usize,
 }
 
 impl PtacGenerator {
@@ -13,6 +14,7 @@ impl PtacGenerator {
             ast,
             instructions: Vec::new(),
             temp_counter: 0,
+            label_counter: 0,
         }
     }
 
@@ -33,8 +35,10 @@ impl PtacGenerator {
 
     fn lower_function(&mut self, function: &ast::Function) -> ptac::Function {
         // Clear state for new function
+        // This can be refactored to be a per function struct instead of mutable state
         self.instructions.clear();
         self.temp_counter = 0;
+        self.label_counter = 0;
 
         for statement in &function.body.statements {
             self.lower_statement(statement);
@@ -93,21 +97,25 @@ impl PtacGenerator {
                 left,
                 operator,
                 right,
-            } => {
-                let lhs = self.lower_expression(left);
-                let rhs = self.lower_expression(right);
-                let destination = self.new_temp();
-                let operator = Self::lower_binary_operator(*operator);
+            } => match operator {
+                ast::BinaryOperator::And => self.lower_logical_and(left, right),
+                ast::BinaryOperator::Or => self.lower_logical_or(left, right),
+                _ => {
+                    let lhs = self.lower_expression(left);
+                    let rhs = self.lower_expression(right);
+                    let destination = self.new_temp();
+                    let operator = Self::lower_binary_operator(*operator);
 
-                self.emit(ptac::Instruction::Binary {
-                    operator,
-                    source1: lhs,
-                    source2: rhs,
-                    destination: destination.clone(),
-                });
+                    self.emit(ptac::Instruction::Binary {
+                        operator,
+                        source1: lhs,
+                        source2: rhs,
+                        destination: destination.clone(),
+                    });
 
-                destination
-            }
+                    destination
+                }
+            },
             ast::Expression::Return(expression) => {
                 match expression {
                     // return <expr>
@@ -126,11 +134,97 @@ impl PtacGenerator {
         }
     }
 
+    fn lower_logical_and(
+        &mut self,
+        left: &ast::Expression,
+        right: &ast::Expression,
+    ) -> ptac::Value {
+        let false_label = self.new_label("and_false");
+        let end_label = self.new_label("and_end");
+        let destination = self.new_temp();
+
+        let v1 = self.lower_expression(left);
+        self.emit(ptac::Instruction::JumpIfZero {
+            condition: v1,
+            target: false_label.clone(),
+        });
+
+        let v2 = self.lower_expression(right);
+        self.emit(ptac::Instruction::JumpIfZero {
+            condition: v2,
+            target: false_label.clone(),
+        });
+
+        // Both sides are true
+        self.emit(ptac::Instruction::Copy {
+            source: ptac::Value::Constant(1),
+            destination: destination.clone(),
+        });
+        self.emit(ptac::Instruction::Jump {
+            target: end_label.clone(),
+        });
+
+        // At least one side was false
+        self.emit(ptac::Instruction::Label(false_label));
+        self.emit(ptac::Instruction::Copy {
+            source: ptac::Value::Constant(0),
+            destination: destination.clone(),
+        });
+
+        self.emit(ptac::Instruction::Label(end_label));
+
+        destination
+    }
+
+    fn lower_logical_or(&mut self, left: &ast::Expression, right: &ast::Expression) -> ptac::Value {
+        let true_label = self.new_label("or_true");
+        let end_label = self.new_label("or_end");
+        let destination = self.new_temp();
+
+        let v1 = self.lower_expression(left);
+        self.emit(ptac::Instruction::JumpIfNotZero {
+            condition: v1,
+            target: true_label.clone(),
+        });
+
+        let v2 = self.lower_expression(right);
+        self.emit(ptac::Instruction::JumpIfNotZero {
+            condition: v2,
+            target: true_label.clone(),
+        });
+
+        // Both sides are false
+        self.emit(ptac::Instruction::Copy {
+            source: ptac::Value::Constant(0),
+            destination: destination.clone(),
+        });
+        self.emit(ptac::Instruction::Jump {
+            target: end_label.clone(),
+        });
+
+        // At least one side is true
+        self.emit(ptac::Instruction::Label(true_label));
+        self.emit(ptac::Instruction::Copy {
+            source: ptac::Value::Constant(1),
+            destination: destination.clone(),
+        });
+
+        self.emit(ptac::Instruction::Label(end_label));
+
+        destination
+    }
+
     // Instead of doing t.x, maybe it can write function_name.x so collisions don't happen
     fn new_temp(&mut self) -> ptac::Value {
         let name = format!("t.{}", self.temp_counter);
         self.temp_counter += 1;
         ptac::Value::Var(name)
+    }
+
+    fn new_label(&mut self, prefix: &str) -> String {
+        let label = format!("{prefix}.{}", self.label_counter);
+        self.label_counter += 1;
+        label
     }
 
     fn emit(&mut self, inst: ptac::Instruction) {
@@ -144,16 +238,26 @@ impl PtacGenerator {
     const fn lower_unary_operator(op: ast::UnaryOperator) -> ptac::UnaryOperator {
         match op {
             ast::UnaryOperator::Negation => ptac::UnaryOperator::Negation,
+            ast::UnaryOperator::Not => ptac::UnaryOperator::Not,
         }
     }
 
-    const fn lower_binary_operator(op: ast::BinaryOperator) -> ptac::BinaryOperator {
+    fn lower_binary_operator(op: ast::BinaryOperator) -> ptac::BinaryOperator {
         match op {
             ast::BinaryOperator::Add => ptac::BinaryOperator::Add,
             ast::BinaryOperator::Subtract => ptac::BinaryOperator::Subtract,
             ast::BinaryOperator::Multiply => ptac::BinaryOperator::Multiply,
             ast::BinaryOperator::Divide => ptac::BinaryOperator::Divide,
             ast::BinaryOperator::Remainder => ptac::BinaryOperator::Remainder,
+            ast::BinaryOperator::Equal => ptac::BinaryOperator::Equal,
+            ast::BinaryOperator::NotEqual => ptac::BinaryOperator::NotEqual,
+            ast::BinaryOperator::Less => ptac::BinaryOperator::Less,
+            ast::BinaryOperator::LessEqual => ptac::BinaryOperator::LessEqual,
+            ast::BinaryOperator::Greater => ptac::BinaryOperator::Greater,
+            ast::BinaryOperator::GreaterEqual => ptac::BinaryOperator::GreaterEqual,
+            ast::BinaryOperator::And | ast::BinaryOperator::Or => {
+                unreachable!("And and Or are handled in lower_expression as control flow")
+            }
         }
     }
 }
