@@ -67,7 +67,7 @@ pub enum Operand {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Condition {
-    Equal,
+    EqualEqual,
     NotEqual,
     Less,
     LessEqual,
@@ -181,7 +181,7 @@ impl fmt::Display for Operand {
 impl fmt::Display for Condition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Equal => write!(f, "e"),
+            Self::EqualEqual => write!(f, "e"),
             Self::NotEqual => write!(f, "ne"),
             Self::Less => write!(f, "l"),
             Self::LessEqual => write!(f, "le"),

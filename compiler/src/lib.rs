@@ -6,4 +6,5 @@ pub mod lexer;
 pub mod parser;
 mod ptac;
 pub mod ptac_generator;
+pub mod semantic_analysis;
 pub mod token;

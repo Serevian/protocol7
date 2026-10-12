@@ -89,9 +89,33 @@ impl Parser {
 
         while !self.check(&TokenKind::CloseBrace) && !self.is_at_end() {
             // Parse statements (variable declaration)
+            if self.check(&TokenKind::Let) || self.check(&TokenKind::Var) {
+                statements.push(self.parse_variable_declaration()?);
+                self.skip_newlines();
+                continue;
+            }
 
             // Otherwise it's an expression
             let expression = self.parse_expression()?;
+
+            // Check for assignments
+            if self.match_token(&TokenKind::Equal) {
+                self.skip_newlines();
+
+                match &expression {
+                    Expression::Identifier(_) => {}
+                    _ => return Err("Invalid assignment target: must be a variable".to_string()),
+                }
+
+                let value = self.parse_expression()?;
+                statements.push(Statement::Assignment {
+                    target: expression,
+                    value,
+                });
+                self.skip_newlines();
+                continue;
+            }
+
             self.skip_newlines();
 
             // If the next token is a "}", then it's the tail expression return
@@ -107,6 +131,38 @@ impl Parser {
         Ok(Block {
             statements,
             tail_expression,
+        })
+    }
+
+    fn parse_variable_declaration(&mut self) -> Result<Statement, String> {
+        let is_mut = self.match_token(&TokenKind::Var);
+        if !is_mut {
+            self.expect(&TokenKind::Let)?;
+        }
+
+        let name = match self.advance().kind.clone() {
+            TokenKind::Identifier(name) => name,
+            other => return Err(format!("Expected variable name, found {other:?}")),
+        };
+
+        let ty = if self.match_token(&TokenKind::Colon) {
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        let init = if self.match_token(&TokenKind::Equal) {
+            self.skip_newlines();
+            Some(self.parse_expression()?)
+        } else {
+            None
+        };
+
+        Ok(Statement::VariableDeclaration {
+            is_mut,
+            name,
+            ty,
+            init,
         })
     }
 
@@ -175,7 +231,7 @@ impl Parser {
             TokenKind::And => Some((2, Association::Left, BinaryOperator::And)),
 
             // Level 3 (Non-Associative)
-            TokenKind::Equal => Some((3, Association::None, BinaryOperator::Equal)),
+            TokenKind::EqualEqual => Some((3, Association::None, BinaryOperator::EqualEqual)),
             TokenKind::NotEqual => Some((3, Association::None, BinaryOperator::NotEqual)),
             TokenKind::Less => Some((3, Association::None, BinaryOperator::Less)),
             TokenKind::LessEqual => Some((3, Association::None, BinaryOperator::LessEqual)),
@@ -215,9 +271,15 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Result<Expression, String> {
+        if self.check(&TokenKind::OpenBrace) {
+            let block = self.parse_block()?;
+            return Ok(Expression::Block(block));
+        }
+
         let token = self.advance().clone();
         match token.kind {
             TokenKind::IntLiteral(num) => Ok(Expression::Literal(Literal::Int(num))),
+            TokenKind::Identifier(name) => Ok(Expression::Identifier(name)),
             TokenKind::OpenParen => {
                 let inner = self.parse_expression()?;
                 self.expect(&TokenKind::CloseParen)?;

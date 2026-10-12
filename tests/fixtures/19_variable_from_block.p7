@@ -1,0 +1,10 @@
+// EXIT: 39
+fun main() -> i32 {
+    let a = {
+        var a = 10
+        a = a * 3
+        a = a + 9
+        a
+    }
+    a
+}

@@ -1,0 +1,7 @@
+// EXIT: 10
+fun main() -> i32 {
+    var a
+    a = 8
+    a = a + 2
+    a
+}

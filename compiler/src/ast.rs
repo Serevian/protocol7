@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::fmt::{self};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
@@ -28,12 +28,25 @@ pub struct Block {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
+    VariableDeclaration {
+        is_mut: bool, // false for 'let', true for 'var'
+        name: String,
+        ty: Option<Type>,
+        init: Option<Expression>,
+    },
+    // Later this will become an expression that returns the Unit type
+    Assignment {
+        target: Expression,
+        value: Expression,
+    },
     Expression(Expression),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
+    Identifier(String),
+    Block(Block),
     Unary {
         operator: UnaryOperator,
         expression: Box<Self>,
@@ -71,12 +84,115 @@ pub enum BinaryOperator {
     Remainder,
     And,
     Or,
-    Equal,
+    EqualEqual,
     NotEqual,
     Less,
     LessEqual,
     Greater,
     GreaterEqual,
+}
+
+impl fmt::Display for Block {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{ ")?;
+        for stmt in &self.statements {
+            write!(f, "{stmt}; ")?;
+        }
+        if let Some(tail) = &self.tail_expression {
+            write!(f, "{tail} ")?;
+        }
+        write!(f, "}}")
+    }
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Literal(Literal::Int(n)) => write!(f, "{n}"),
+            Self::Identifier(name) => write!(f, "{name}"),
+            Self::Block(block) => write!(f, "{block}"),
+            Self::Unary {
+                operator,
+                expression,
+            } => {
+                write!(f, "({operator}{expression})")
+            }
+            Self::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                // Outer parens make precedence immediately obvious!
+                write!(f, "({left} {operator} {right})")
+            }
+            Self::Return(Some(expr)) => write!(f, "return {expr}"),
+            Self::Return(None) => write!(f, "return"),
+        }
+    }
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::VariableDeclaration {
+                is_mut,
+                name,
+                ty,
+                init,
+            } => {
+                let kw = if *is_mut { "var" } else { "let" };
+                write!(f, "{kw} {name}")?;
+                if let Some(t) = ty {
+                    write!(f, ": {t}")?;
+                }
+                if let Some(e) = init {
+                    write!(f, " = {e}")?;
+                }
+                Ok(())
+            }
+            Self::Assignment { target, value } => {
+                write!(f, "{target} = {value}")
+            }
+            Self::Expression(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Named(name) => write!(f, "{name}"),
+        }
+    }
+}
+
+impl fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Negation => write!(f, "-"),
+            Self::Not => write!(f, "!"),
+        }
+    }
+}
+
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add => write!(f, "+"),
+            Self::Subtract => write!(f, "-"),
+            Self::Multiply => write!(f, "*"),
+            Self::Divide => write!(f, "/"),
+            Self::Remainder => write!(f, "%"),
+            Self::And => write!(f, "&&"),
+            Self::Or => write!(f, "||"),
+            Self::EqualEqual => write!(f, "=="),
+            Self::NotEqual => write!(f, "!="),
+            Self::Less => write!(f, "<"),
+            Self::LessEqual => write!(f, "<="),
+            Self::Greater => write!(f, ">"),
+            Self::GreaterEqual => write!(f, ">="),
+        }
+    }
 }
 
 struct Node {
@@ -102,8 +218,12 @@ impl Node {
         let last = self.children.len().saturating_sub(1);
         for (i, child) in self.children.iter().enumerate() {
             let is_last = i == last;
+
             let connector = if is_last { "└─ " } else { "├─ " };
-            let _ = writeln!(out, "{prefix}{connector}{}", child.label);
+            out.push_str(prefix);
+            out.push_str(connector);
+            out.push_str(&child.label);
+            out.push('\n');
 
             let next_prefix = format!("{prefix}{}", if is_last { "   " } else { "│  " });
             child.render_children(out, &next_prefix);
@@ -126,28 +246,42 @@ impl Program {
 impl Item {
     fn to_node(&self) -> Node {
         match self {
-            Self::Function(function) => function.to_node(),
+            Self::Function(func) => func.to_node(),
         }
     }
 }
 
 impl Function {
     fn to_node(&self) -> Node {
-        let mut children = Vec::new();
-        if let Some(ty) = &self.return_type {
-            children.push(Node::new(format!("ReturnType {ty:?}"), vec![]));
-        }
-        children.push(self.body.to_node());
-        Node::new(format!("Function {:?}", self.name), children)
+        let return_str = self
+            .return_type
+            .as_ref()
+            .map_or_else(String::new, |t| format!(" -> {t}"));
+
+        Node::new(
+            format!("Function \"{}\"{}", self.name, return_str),
+            vec![self.body.to_node()],
+        )
     }
 }
 
 impl Block {
     fn to_node(&self) -> Node {
         let mut children: Vec<Node> = self.statements.iter().map(Statement::to_node).collect();
+
         if let Some(tail) = &self.tail_expression {
-            children.push(Node::new("Tail", vec![tail.to_node()]));
+            match &**tail {
+                Expression::Block(nested) => {
+                    let mut node = nested.to_node();
+                    node.label = format!("[tail] {}", node.label);
+                    children.push(node);
+                }
+                other => {
+                    children.push(Node::new(format!("[tail] {other}"), vec![]));
+                }
+            }
         }
+
         Node::new("Block", children)
     }
 }
@@ -155,28 +289,8 @@ impl Block {
 impl Statement {
     fn to_node(&self) -> Node {
         match self {
-            Self::Expression(e) => Node::new("Expression", vec![e.to_node()]),
-        }
-    }
-}
-
-impl Expression {
-    fn to_node(&self) -> Node {
-        match self {
-            Self::Literal(Literal::Int(n)) => Node::new(format!("Int {n}"), vec![]),
-            Self::Unary {
-                operator,
-                expression,
-            } => Node::new(format!("Unary {operator:?}"), vec![expression.to_node()]),
-            Self::Binary {
-                left,
-                operator,
-                right,
-            } => Node::new(
-                format!("Binary {operator:?}"),
-                vec![left.to_node(), right.to_node()],
-            ),
-            Self::Return(expr) => Node::new("Return", expr.iter().map(|e| e.to_node()).collect()),
+            Self::Expression(Expression::Block(block)) => block.to_node(),
+            other => Node::new(other.to_string(), vec![]),
         }
     }
 }

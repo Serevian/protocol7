@@ -28,9 +28,9 @@ impl Lexer {
                 '=' => match self.peek() {
                     Some('=') => {
                         let _ = self.advance();
-                        Token::new(TokenKind::Equal)
+                        Token::new(TokenKind::EqualEqual)
                     }
-                    _ => Token::new(TokenKind::Error(ch.to_string())),
+                    _ => Token::new(TokenKind::Equal),
                 },
                 '!' => match self.peek() {
                     Some('=') => {
@@ -78,6 +78,7 @@ impl Lexer {
                     }
                     _ => Token::new(TokenKind::Greater),
                 },
+                ':' => Token::new(TokenKind::Colon),
                 '(' => Token::new(TokenKind::OpenParen),
                 ')' => Token::new(TokenKind::CloseParen),
                 '{' => Token::new(TokenKind::OpenBrace),
@@ -123,6 +124,8 @@ impl Lexer {
             "and" => TokenKind::And,
             "or" => TokenKind::Or,
             "not" => TokenKind::Not,
+            "let" => TokenKind::Let,
+            "var" => TokenKind::Var,
             _ => TokenKind::Identifier(identifier),
         };
 

@@ -26,6 +26,9 @@ pub struct Driver {
     emit_parser: bool,
 
     #[arg(long)]
+    emit_analysis: bool,
+
+    #[arg(long)]
     emit_ptac: bool,
 
     #[arg(long)]
@@ -40,6 +43,7 @@ impl Driver {
         self.emit_lex_table
             || self.emit_lex_lines
             || self.emit_parser
+            || self.emit_analysis
             || self.emit_ptac
             || self.emit_aast
             || self.emit_asm
@@ -63,10 +67,19 @@ pub fn run(args: &Driver, out: &mut dyn Write) -> Result<()> {
     }
 
     let mut parser = parser::Parser::new(tokens);
-    let ast = parser
+    let mut ast = parser
         .parse()
         .map_err(|err| anyhow::anyhow!("Parse Error: {err}"))?;
     if args.emit_parser {
+        writeln!(out, "{}", ast.dump_tree())?;
+        return Ok(());
+    }
+
+    semantic_analysis::SemanticAnalyzer::new()
+        .analyze(&mut ast)
+        .map_err(|err| anyhow::anyhow!("Analysis error: {err}"))?;
+
+    if args.emit_analysis {
         writeln!(out, "{}", ast.dump_tree())?;
         return Ok(());
     }

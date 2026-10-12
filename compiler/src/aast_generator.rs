@@ -79,7 +79,7 @@ impl AssemblyGenerator {
                             destination: destination.clone(),
                         });
                         instructions.push(aast::Instruction::SetOnCondition {
-                            condition: aast::Condition::Equal,
+                            condition: aast::Condition::EqualEqual,
                             operand: destination,
                         });
                     }
@@ -150,7 +150,7 @@ impl AssemblyGenerator {
                             _ => {}
                         }
                     }
-                    ptac::BinaryOperator::Equal
+                    ptac::BinaryOperator::EqualEqual
                     | ptac::BinaryOperator::NotEqual
                     | ptac::BinaryOperator::Less
                     | ptac::BinaryOperator::LessEqual
@@ -165,7 +165,7 @@ impl AssemblyGenerator {
                             destination: destination.clone(),
                         });
                         let condition = match operator {
-                            ptac::BinaryOperator::Equal => aast::Condition::Equal,
+                            ptac::BinaryOperator::EqualEqual => aast::Condition::EqualEqual,
                             ptac::BinaryOperator::NotEqual => aast::Condition::NotEqual,
                             ptac::BinaryOperator::Less => aast::Condition::Less,
                             ptac::BinaryOperator::LessEqual => aast::Condition::LessEqual,
@@ -205,7 +205,7 @@ impl AssemblyGenerator {
                     ptac::Instruction::JumpIfZero {
                         condition: _,
                         target: _,
-                    } => aast::Condition::Equal,
+                    } => aast::Condition::EqualEqual,
                     ptac::Instruction::JumpIfNotZero {
                         condition: _,
                         target: _,

@@ -69,6 +69,31 @@ impl PtacGenerator {
             ast::Statement::Expression(expression) => {
                 self.lower_expression(expression);
             }
+            ast::Statement::VariableDeclaration { name, init, .. } => {
+                if let Some(expr) = init {
+                    let source = self.lower_expression(expr);
+                    self.emit(ptac::Instruction::Copy {
+                        source,
+                        destination: ptac::Value::Var(name.clone()),
+                    });
+                }
+                // Else, don't do nothing
+                // TODO: Implement a Definite Assigment Analysis in the semantic analyzer
+            }
+            ast::Statement::Assignment { target, value } => {
+                let source = self.lower_expression(value);
+                let dest_name = match target {
+                    ast::Expression::Identifier(name) => name.clone(),
+                    _ => unreachable!(
+                        "Semantic analysis hopefully guarantees target is an identifier"
+                    ),
+                };
+
+                self.emit(ptac::Instruction::Copy {
+                    source,
+                    destination: ptac::Value::Var(dest_name),
+                });
+            }
         }
     }
 
@@ -77,6 +102,16 @@ impl PtacGenerator {
             ast::Expression::Literal(literal) => match literal {
                 ast::Literal::Int(int) => ptac::Value::Constant(*int),
             },
+            ast::Expression::Block(block) => {
+                for statement in &block.statements {
+                    self.lower_statement(statement);
+                }
+
+                block
+                    .tail_expression
+                    .as_ref()
+                    .map_or(ptac::Value::Constant(0), |tail| self.lower_expression(tail))
+            }
             ast::Expression::Unary {
                 operator,
                 expression,
@@ -131,6 +166,7 @@ impl PtacGenerator {
                 // Return expression diverges, so its value is never read. Perhaps make a Never type?
                 ptac::Value::Constant(0)
             }
+            ast::Expression::Identifier(name) => ptac::Value::Var(name.clone()),
         }
     }
 
@@ -249,7 +285,7 @@ impl PtacGenerator {
             ast::BinaryOperator::Multiply => ptac::BinaryOperator::Multiply,
             ast::BinaryOperator::Divide => ptac::BinaryOperator::Divide,
             ast::BinaryOperator::Remainder => ptac::BinaryOperator::Remainder,
-            ast::BinaryOperator::Equal => ptac::BinaryOperator::Equal,
+            ast::BinaryOperator::EqualEqual => ptac::BinaryOperator::EqualEqual,
             ast::BinaryOperator::NotEqual => ptac::BinaryOperator::NotEqual,
             ast::BinaryOperator::Less => ptac::BinaryOperator::Less,
             ast::BinaryOperator::LessEqual => ptac::BinaryOperator::LessEqual,
