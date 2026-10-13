@@ -138,7 +138,7 @@ impl fmt::Display for Instruction {
             Self::SetOnCondition { condition, operand } => {
                 write!(f, "set{condition} #{operand}")
             }
-            Self::Label(str) => write!(f, "#{str}:"),
+            Self::Label(str) => write!(f, "\n#{str}:"),
             Self::SignExtension => write!(f, "cd"),
             Self::AllocateStack(bytes) => write!(f, "sub rsp, {bytes}"),
             Self::Return => write!(f, "ret"),

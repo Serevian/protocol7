@@ -128,6 +128,18 @@ impl SemanticAnalyzer {
                 self.resolve_expression(left)?;
                 self.resolve_expression(right)?;
             }
+            Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.resolve_expression(condition)?;
+                self.resolve_block(then_branch)?;
+
+                if let Some(else_expression) = else_branch {
+                    self.resolve_expression(else_expression)?
+                }
+            }
             Expression::Return(expression) => {
                 if let Some(inner) = expression {
                     self.resolve_expression(inner)?;

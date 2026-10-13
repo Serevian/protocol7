@@ -133,16 +133,7 @@ impl PtacGenerator {
             ast::Expression::Literal(literal) => match literal {
                 ast::Literal::Int(int) => ptac::Value::Constant(*int),
             },
-            ast::Expression::Block(block) => {
-                for statement in &block.statements {
-                    self.lower_statement(statement);
-                }
-
-                block
-                    .tail_expression
-                    .as_ref()
-                    .map_or(ptac::Value::Constant(0), |tail| self.lower_expression(tail))
-            }
+            ast::Expression::Block(block) => self.lower_block_value(block),
             ast::Expression::Unary {
                 operator,
                 expression,
@@ -182,6 +173,43 @@ impl PtacGenerator {
                     destination
                 }
             },
+            ast::Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let end_label = self.new_label("if_end");
+                let else_label = self.new_label("if_else");
+                let destination = self.new_temp();
+
+                let condition_value = self.lower_expression(condition);
+                self.emit(ptac::Instruction::JumpIfZero {
+                    condition: condition_value,
+                    target: else_label.clone(),
+                });
+
+                let then_value = self.lower_block_value(then_branch);
+                self.emit(ptac::Instruction::Copy {
+                    source: then_value,
+                    destination: destination.clone(),
+                });
+                self.emit(ptac::Instruction::Jump {
+                    target: end_label.clone(),
+                });
+
+                self.emit(ptac::Instruction::Label(else_label));
+                if let Some(else_expression) = else_branch {
+                    let else_value = self.lower_expression(else_expression);
+                    self.emit(ptac::Instruction::Copy {
+                        source: else_value,
+                        destination: destination.clone(),
+                    });
+                }
+
+                self.emit(ptac::Instruction::Label(end_label));
+
+                destination
+            }
             ast::Expression::Return(expression) => {
                 match expression {
                     // return <expr>
@@ -325,6 +353,18 @@ impl PtacGenerator {
             ast::BinaryOperator::And | ast::BinaryOperator::Or => {
                 unreachable!("And and Or are handled in lower_expression as control flow")
             }
+        }
+    }
+
+    fn lower_block_value(&mut self, block: &ast::Block) -> ptac::Value {
+        for statement in &block.statements {
+            self.lower_statement(statement);
+        }
+
+        if let Some(tail) = &block.tail_expression {
+            self.lower_expression(tail)
+        } else {
+            ptac::Value::Constant(0)
         }
     }
 }

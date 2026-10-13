@@ -301,6 +301,10 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Result<Expression, String> {
+        if self.check(&TokenKind::If) {
+            return self.parse_if_expression();
+        }
+
         if self.check(&TokenKind::OpenBrace) {
             let block = self.parse_block()?;
             return Ok(Expression::Block(block));
@@ -317,6 +321,37 @@ impl Parser {
             }
             other => Err(format!("Expected expression, found {other:?}")),
         }
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, String> {
+        self.expect(&TokenKind::If)?;
+
+        let condition = self.parse_expression()?;
+        self.skip_newlines();
+
+        let then_branch = self.parse_block()?;
+        self.skip_newlines();
+
+        let else_branch = if self.match_token(&TokenKind::Else) {
+            self.skip_newlines();
+
+            if self.check(&TokenKind::If) {
+                Some(Box::new(self.parse_if_expression()?))
+            } else if self.check(&TokenKind::OpenBrace) {
+                let block = self.parse_block()?;
+                Some(Box::new(Expression::Block(block)))
+            } else {
+                return Err("Expected '{' or 'if' after 'else'".to_string());
+            }
+        } else {
+            None
+        };
+
+        Ok(Expression::If {
+            condition: Box::new(condition),
+            then_branch,
+            else_branch,
+        })
     }
 
     fn peek(&self) -> &TokenKind {

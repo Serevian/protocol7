@@ -152,6 +152,8 @@ impl Lexer {
             "not" => TokenKind::Not,
             "let" => TokenKind::Let,
             "var" => TokenKind::Var,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
             _ => TokenKind::Identifier(identifier),
         };
 

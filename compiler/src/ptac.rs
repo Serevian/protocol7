@@ -125,7 +125,7 @@ impl fmt::Display for Instruction {
             Self::JumpIfNotZero { condition, target } => {
                 write!(f, "jump if {condition} not zero to #{target}")
             }
-            Self::Label(str) => write!(f, "#{str}:"),
+            Self::Label(str) => write!(f, "\n#{str}:"),
             Self::Return(Some(value)) => write!(f, "return {value}"),
         }
     }

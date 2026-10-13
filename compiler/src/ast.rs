@@ -61,6 +61,14 @@ pub enum Expression {
         operator: BinaryOperator,
         right: Box<Self>,
     },
+    If {
+        condition: Box<Self>,
+        then_branch: Block,
+        // None: no else branch
+        // Some(Block): final else
+        // Some (If): Else if
+        else_branch: Option<Box<Self>>,
+    },
     Return(Option<Box<Self>>),
 }
 
@@ -129,6 +137,17 @@ impl fmt::Display for Expression {
             } => {
                 // Outer parens make precedence immediately obvious!
                 write!(f, "({left} {operator} {right})")
+            }
+            Self::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                if let Some(else_expr) = else_branch {
+                    write!(f, "(if {condition} then {then_branch} else {else_expr})")
+                } else {
+                    write!(f, "(if {condition} then {then_branch})")
+                }
             }
             Self::Return(Some(expr)) => write!(f, "return {expr}"),
             Self::Return(None) => write!(f, "return"),

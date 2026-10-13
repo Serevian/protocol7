@@ -10,6 +10,8 @@ pub enum TokenKind {
     Not,
     Let,
     Var,
+    If,
+    Else,
 
     // Identifiers
     Identifier(String),
@@ -56,6 +58,8 @@ impl TokenKind {
             Self::Not => "Not",
             Self::Let => "Let",
             Self::Var => "Var",
+            Self::If => "If",
+            Self::Else => "Else",
             Self::Identifier(_) => "Identifier",
             Self::IntLiteral(_) => "IntLiteral",
             Self::Equal => "Equal",
@@ -98,6 +102,8 @@ impl fmt::Display for TokenKind {
             Self::Not => f.write_str("not"),
             Self::Let => f.write_str("let"),
             Self::Var => f.write_str("var"),
+            Self::If => f.write_str("if"),
+            Self::Else => f.write_str("else"),
             Self::Identifier(s) => f.write_str(s),
             Self::IntLiteral(n) => write!(f, "{n}"),
             Self::Equal => write!(f, "="),
