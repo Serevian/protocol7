@@ -17,10 +17,7 @@ pub struct Driver {
     output: Option<PathBuf>,
 
     #[arg(long)]
-    emit_lex_table: bool,
-
-    #[arg(long)]
-    emit_lex_lines: bool,
+    emit_lexer: bool,
 
     #[arg(long)]
     emit_parser: bool,
@@ -40,8 +37,7 @@ pub struct Driver {
 
 impl Driver {
     pub fn stops_early(&self) -> bool {
-        self.emit_lex_table
-            || self.emit_lex_lines
+        self.emit_lexer
             || self.emit_parser
             || self.emit_analysis
             || self.emit_ptac
@@ -55,12 +51,7 @@ pub fn run(args: &Driver, out: &mut dyn Write) -> Result<()> {
         .with_context(|| format!("Could not read input file: {}", args.input.display()))?;
 
     let tokens = lexer::Lexer::new(&source).tokenize();
-    if args.emit_lex_table {
-        let string = token::format_token_table(&tokens);
-        writeln!(out, "{string}")?;
-        return Ok(());
-    }
-    if args.emit_lex_lines {
+    if args.emit_lexer {
         let string = token::format_token_lines(&tokens);
         writeln!(out, "{string}")?;
         return Ok(());

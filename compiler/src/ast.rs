@@ -39,6 +39,11 @@ pub enum Statement {
         target: Expression,
         value: Expression,
     },
+    CompoundAssignment {
+        operator: BinaryOperator,
+        target: Expression,
+        value: Expression,
+    },
     Expression(Expression),
 }
 
@@ -152,6 +157,21 @@ impl fmt::Display for Statement {
             }
             Self::Assignment { target, value } => {
                 write!(f, "{target} = {value}")
+            }
+            Self::CompoundAssignment {
+                operator,
+                target,
+                value,
+            } => {
+                let op = match operator {
+                    BinaryOperator::Add => "+=",
+                    BinaryOperator::Subtract => "-=",
+                    BinaryOperator::Multiply => "*=",
+                    BinaryOperator::Divide => "/=",
+                    BinaryOperator::Remainder => "%=",
+                    _ => unreachable!(),
+                };
+                write!(f, "{target} {op} {value}")
             }
             Self::Expression(e) => write!(f, "{e}"),
         }

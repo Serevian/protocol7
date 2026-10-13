@@ -86,6 +86,25 @@ impl SemanticAnalyzer {
 
                 self.resolve_expression(value)?;
             }
+            Statement::CompoundAssignment {
+                operator: _,
+                target,
+                value,
+            } => {
+                let Expression::Identifier(var_name) = target else {
+                    return Err("Invalid assignment target: must be a variable".to_string());
+                };
+
+                let symbol = self.lookup(var_name)?;
+
+                if !symbol.is_mut {
+                    return Err(format!("Cannot assign to immutable variable '{var_name}'"));
+                }
+
+                *var_name = symbol.unique_name.clone();
+
+                self.resolve_expression(value)?;
+            }
             Statement::Expression(expr) => {
                 self.resolve_expression(expr)?;
             }

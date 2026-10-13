@@ -99,7 +99,7 @@ impl Parser {
             let expression = self.parse_expression()?;
 
             // Check for assignments
-            if self.match_token(&TokenKind::Equal) {
+            if let Some(op) = self.match_assign_operator() {
                 self.skip_newlines();
 
                 match &expression {
@@ -108,10 +108,22 @@ impl Parser {
                 }
 
                 let value = self.parse_expression()?;
-                statements.push(Statement::Assignment {
-                    target: expression,
-                    value,
-                });
+                match op {
+                    AssignOperator::Simple => {
+                        statements.push(Statement::Assignment {
+                            target: expression,
+                            value,
+                        });
+                    }
+                    AssignOperator::Compound(binary_operator) => {
+                        statements.push(Statement::CompoundAssignment {
+                            operator: binary_operator,
+                            target: expression,
+                            value,
+                        });
+                    }
+                }
+
                 self.skip_newlines();
                 continue;
             }
@@ -251,6 +263,24 @@ impl Parser {
         }
     }
 
+    fn match_assign_operator(&mut self) -> Option<AssignOperator> {
+        if self.match_token(&TokenKind::Equal) {
+            Some(AssignOperator::Simple)
+        } else if self.match_token(&TokenKind::PlusEqual) {
+            Some(AssignOperator::Compound(BinaryOperator::Add))
+        } else if self.match_token(&TokenKind::MinusEqual) {
+            Some(AssignOperator::Compound(BinaryOperator::Subtract))
+        } else if self.match_token(&TokenKind::StarEqual) {
+            Some(AssignOperator::Compound(BinaryOperator::Multiply))
+        } else if self.match_token(&TokenKind::SlashEqual) {
+            Some(AssignOperator::Compound(BinaryOperator::Divide))
+        } else if self.match_token(&TokenKind::PercentEqual) {
+            Some(AssignOperator::Compound(BinaryOperator::Remainder))
+        } else {
+            None
+        }
+    }
+
     fn parse_unary(&mut self) -> Result<Expression, String> {
         if self.match_token(&TokenKind::Minus) {
             let inner = self.parse_unary()?;
@@ -339,4 +369,10 @@ pub enum Association {
     Left,
     Right, // Still don't have any right association operators
     None,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AssignOperator {
+    Simple,                   // =
+    Compound(BinaryOperator), // +=, -=, *=, /=, %=
 }

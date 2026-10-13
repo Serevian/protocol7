@@ -39,15 +39,31 @@ impl Lexer {
                     }
                     _ => Token::new(TokenKind::Error(ch.to_string())),
                 },
-                '+' => Token::new(TokenKind::Plus),
+                '+' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::PlusEqual)
+                    }
+                    _ => Token::new(TokenKind::Plus),
+                },
                 '-' => match self.peek() {
                     Some('>') => {
                         let _ = self.advance();
                         Token::new(TokenKind::Arrow)
                     }
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::MinusEqual)
+                    }
                     _ => Token::new(TokenKind::Minus),
                 },
-                '*' => Token::new(TokenKind::Star),
+                '*' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::StarEqual)
+                    }
+                    _ => Token::new(TokenKind::Star),
+                },
                 '/' => match self.peek() {
                     Some('/') => {
                         let _ = self.advance();
@@ -61,9 +77,19 @@ impl Lexer {
                         }
                         continue;
                     }
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::SlashEqual)
+                    }
                     _ => Token::new(TokenKind::Slash),
                 },
-                '%' => Token::new(TokenKind::Percent),
+                '%' => match self.peek() {
+                    Some('=') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::PercentEqual)
+                    }
+                    _ => Token::new(TokenKind::Percent),
+                },
                 '<' => match self.peek() {
                     Some('=') => {
                         let _ = self.advance();

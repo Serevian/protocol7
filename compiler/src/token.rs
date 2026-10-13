@@ -19,11 +19,16 @@ pub enum TokenKind {
     EqualEqual,
     NotEqual,
     Plus,
+    PlusEqual,
     Minus,
+    MinusEqual,
     Arrow,
     Star,
+    StarEqual,
     Slash,
+    SlashEqual,
     Percent,
+    PercentEqual,
     Less,
     LessEqual,
     Greater,
@@ -57,11 +62,16 @@ impl TokenKind {
             Self::EqualEqual => "EqualEqual",
             Self::NotEqual => "NotEqual",
             Self::Plus => "Plus",
+            Self::PlusEqual => "PlusEqual",
             Self::Minus => "Minus",
+            Self::MinusEqual => "MinusEqual",
             Self::Arrow => "Arrow",
             Self::Star => "Star",
+            Self::StarEqual => "StarEqual",
             Self::Slash => "Slash",
+            Self::SlashEqual => "SlashEqual",
             Self::Percent => "Percent",
+            Self::PercentEqual => "PercentEqual",
             Self::Less => "Less",
             Self::LessEqual => "LessEqual",
             Self::Greater => "Greater",
@@ -94,11 +104,16 @@ impl fmt::Display for TokenKind {
             Self::EqualEqual => f.write_str("=="),
             Self::NotEqual => f.write_str("!="),
             Self::Plus => f.write_str("+"),
+            Self::PlusEqual => f.write_str("+="),
             Self::Minus => f.write_str("-"),
+            Self::MinusEqual => f.write_str("-="),
             Self::Arrow => f.write_str("->"),
             Self::Star => f.write_str("*"),
+            Self::StarEqual => f.write_str("*="),
             Self::Slash => f.write_str("/"),
+            Self::SlashEqual => f.write_str("/="),
             Self::Percent => f.write_str("%"),
+            Self::PercentEqual => f.write_str("%="),
             Self::Less => f.write_str("<"),
             Self::LessEqual => f.write_str("<="),
             Self::Greater => f.write_str(">"),
@@ -136,43 +151,6 @@ impl fmt::Display for Token {
             other => f.write_str(other.name()),
         }
     }
-}
-
-/// ```text
-///  #  KIND        LEXEME
-/// ---------------------------
-///  0  Fun         fun
-///  1  Identifier  main
-/// ```
-#[must_use]
-pub fn format_token_table(tokens: &[Token]) -> String {
-    let rows: Vec<(String, &'static str, String)> = tokens
-        .iter()
-        .enumerate()
-        .map(|(i, t)| (i.to_string(), t.kind.name(), t.kind.to_string()))
-        .collect();
-
-    let idx_w = rows.iter().map(|r| r.0.len()).max().unwrap_or(0).max(1);
-    let kind_w = rows
-        .iter()
-        .map(|r| r.1.len())
-        .max()
-        .unwrap_or(0)
-        .max("KIND".len());
-    let lex_w = rows
-        .iter()
-        .map(|r| r.2.chars().count())
-        .max()
-        .unwrap_or(0)
-        .max("LEXEME".len());
-
-    let mut out = String::new();
-    let _ = writeln!(out, "{:>idx_w$}  {:<kind_w$}  LEXEME", "#", "KIND");
-    let _ = writeln!(out, "{}", "-".repeat(idx_w + kind_w + lex_w + 4));
-    for (idx, kind, lexeme) in &rows {
-        let _ = writeln!(out, "{idx:>idx_w$}  {kind:<kind_w$}  {lexeme}");
-    }
-    out
 }
 
 /// ```text

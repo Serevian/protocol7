@@ -94,6 +94,37 @@ impl PtacGenerator {
                     destination: ptac::Value::Var(dest_name),
                 });
             }
+            ast::Statement::CompoundAssignment {
+                operator,
+                target,
+                value,
+            } => {
+                let target_name = match target {
+                    ast::Expression::Identifier(name) => name.clone(),
+                    _ => unreachable!(
+                        "Semantic analysis hopefully guarantees target is an identifier"
+                    ),
+                };
+
+                let current_val = ptac::Value::Var(target_name.clone());
+
+                let rhs_val = self.lower_expression(value);
+
+                let temp = self.new_temp();
+                let op = Self::lower_binary_operator(*operator);
+
+                self.emit(ptac::Instruction::Binary {
+                    operator: op,
+                    source1: current_val,
+                    source2: rhs_val,
+                    destination: temp.clone(),
+                });
+
+                self.emit(ptac::Instruction::Copy {
+                    source: temp,
+                    destination: ptac::Value::Var(target_name),
+                });
+            }
         }
     }
 
