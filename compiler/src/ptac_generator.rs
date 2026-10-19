@@ -226,6 +226,112 @@ impl PtacGenerator {
                 ptac::Value::Constant(0)
             }
             ast::Expression::Identifier(name) => ptac::Value::Var(name.clone()),
+            ast::Expression::While {
+                condition,
+                body,
+                label,
+            } => {
+                let loop_label = label.as_ref().expect("While loop must be labeled");
+                let start_label = format!("{loop_label}_start");
+                let continue_label = format!("{loop_label}_continue");
+                let end_label = format!("{loop_label}_end");
+
+                self.emit(ptac::Instruction::Label(start_label.clone()));
+                self.emit(ptac::Instruction::Label(continue_label));
+
+                let condition_value = self.lower_expression(condition);
+                self.emit(ptac::Instruction::JumpIfZero {
+                    condition: condition_value,
+                    target: end_label.clone(),
+                });
+
+                self.lower_block_value(body);
+
+                self.emit(ptac::Instruction::Jump {
+                    target: start_label,
+                });
+
+                self.emit(ptac::Instruction::Label(end_label));
+
+                ptac::Value::Constant(0)
+            }
+            ast::Expression::For {
+                var_name,
+                start,
+                end,
+                body,
+                label,
+            } => {
+                let loop_label = label.as_ref().expect("While loop must be labeled");
+                let start_label = format!("{loop_label}_start");
+                let continue_label = format!("{loop_label}_continue");
+                let end_label = format!("{loop_label}_end");
+
+                let start_val = self.lower_expression(start);
+                self.emit(ptac::Instruction::Copy {
+                    source: start_val,
+                    destination: ptac::Value::Var(var_name.clone()),
+                });
+
+                let end_val = self.lower_expression(end);
+                let end_temp = self.new_temp();
+                self.emit(ptac::Instruction::Copy {
+                    source: end_val,
+                    destination: end_temp.clone(),
+                });
+
+                self.emit(ptac::Instruction::Label(start_label.clone()));
+
+                let cond_temp = self.new_temp();
+                self.emit(ptac::Instruction::Binary {
+                    operator: ptac::BinaryOperator::Less,
+                    source1: ptac::Value::Var(var_name.clone()),
+                    source2: end_temp,
+                    destination: cond_temp.clone(),
+                });
+                self.emit(ptac::Instruction::JumpIfZero {
+                    condition: cond_temp,
+                    target: end_label.clone(),
+                });
+
+                self.lower_block_value(body);
+
+                self.emit(ptac::Instruction::Label(continue_label));
+
+                let inc_temp = self.new_temp();
+                self.emit(ptac::Instruction::Binary {
+                    operator: ptac::BinaryOperator::Add,
+                    source1: ptac::Value::Var(var_name.clone()),
+                    source2: ptac::Value::Constant(1),
+                    destination: inc_temp.clone(),
+                });
+                self.emit(ptac::Instruction::Copy {
+                    source: inc_temp,
+                    destination: ptac::Value::Var(var_name.clone()),
+                });
+
+                self.emit(ptac::Instruction::Jump {
+                    target: start_label,
+                });
+
+                self.emit(ptac::Instruction::Label(end_label));
+
+                ptac::Value::Constant(0)
+            }
+            ast::Expression::Break(label) => {
+                let loop_label = label.as_ref().expect("Break must be labeled");
+                self.emit(ptac::Instruction::Jump {
+                    target: format!("{loop_label}_end"),
+                });
+                ptac::Value::Constant(0)
+            }
+            ast::Expression::Continue(label) => {
+                let loop_label = label.as_ref().expect("Continue must be labeled");
+                self.emit(ptac::Instruction::Jump {
+                    target: format!("{loop_label}_continue"),
+                });
+                ptac::Value::Constant(0)
+            }
         }
     }
 

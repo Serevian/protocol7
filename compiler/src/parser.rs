@@ -301,6 +301,18 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Result<Expression, String> {
+        if self.check(&TokenKind::While) {
+            return self.parse_while_expression();
+        }
+        if self.check(&TokenKind::For) {
+            return self.parse_for_expression();
+        }
+        if self.match_token(&TokenKind::Break) {
+            return Ok(Expression::Break(None));
+        }
+        if self.match_token(&TokenKind::Continue) {
+            return Ok(Expression::Continue(None));
+        }
         if self.check(&TokenKind::If) {
             return self.parse_if_expression();
         }
@@ -351,6 +363,47 @@ impl Parser {
             condition: Box::new(condition),
             then_branch,
             else_branch,
+        })
+    }
+
+    fn parse_while_expression(&mut self) -> Result<Expression, String> {
+        self.expect(&TokenKind::While)?;
+
+        let condition = self.parse_expression()?;
+        self.skip_newlines();
+
+        let body = self.parse_block()?;
+
+        Ok(Expression::While {
+            condition: Box::new(condition),
+            body,
+            label: None,
+        })
+    }
+
+    fn parse_for_expression(&mut self) -> Result<Expression, String> {
+        self.expect(&TokenKind::For)?;
+
+        let var_name = match self.advance().kind.clone() {
+            TokenKind::Identifier(name) => name,
+            other => return Err(format!("Expected loop variable name, found {other:?}")),
+        };
+
+        self.expect(&TokenKind::In)?;
+
+        let start = self.parse_expression_climbing(0)?;
+        self.expect(&TokenKind::DotDot)?;
+        let end = self.parse_expression_climbing(0)?;
+
+        self.skip_newlines();
+        let body = self.parse_block()?;
+
+        Ok(Expression::For {
+            var_name,
+            start: Box::new(start),
+            end: Box::new(end),
+            body,
+            label: None,
         })
     }
 

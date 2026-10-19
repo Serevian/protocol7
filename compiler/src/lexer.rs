@@ -105,6 +105,13 @@ impl Lexer {
                     _ => Token::new(TokenKind::Greater),
                 },
                 ':' => Token::new(TokenKind::Colon),
+                '.' => match self.peek() {
+                    Some('.') => {
+                        let _ = self.advance();
+                        Token::new(TokenKind::DotDot)
+                    }
+                    _ => Token::new(TokenKind::Error(ch.to_string())),
+                },
                 '(' => Token::new(TokenKind::OpenParen),
                 ')' => Token::new(TokenKind::CloseParen),
                 '{' => Token::new(TokenKind::OpenBrace),
@@ -154,6 +161,11 @@ impl Lexer {
             "var" => TokenKind::Var,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
+            "while" => TokenKind::While,
+            "for" => TokenKind::For,
+            "in" => TokenKind::In,
+            "break" => TokenKind::Break,
+            "continue" => TokenKind::Continue,
             _ => TokenKind::Identifier(identifier),
         };
 

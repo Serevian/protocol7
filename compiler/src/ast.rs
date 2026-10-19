@@ -69,6 +69,20 @@ pub enum Expression {
         // Some (If): Else if
         else_branch: Option<Box<Self>>,
     },
+    For {
+        var_name: String,
+        start: Box<Self>,
+        end: Box<Self>,
+        body: Block,
+        label: Option<String>,
+    },
+    While {
+        condition: Box<Self>,
+        body: Block,
+        label: Option<String>,
+    },
+    Break(Option<String>),
+    Continue(Option<String>),
     Return(Option<Box<Self>>),
 }
 
@@ -144,9 +158,50 @@ impl fmt::Display for Expression {
                 else_branch,
             } => {
                 if let Some(else_expr) = else_branch {
-                    write!(f, "(if {condition} then {then_branch} else {else_expr})")
+                    write!(f, "if {condition} then {then_branch} else {else_expr}")
                 } else {
-                    write!(f, "(if {condition} then {then_branch})")
+                    write!(f, "if {condition} then {then_branch}")
+                }
+            }
+            Self::For {
+                var_name,
+                start,
+                end,
+                body,
+                label,
+            } => {
+                if let Some(label_str) = label {
+                    write!(
+                        f,
+                        "'{label_str} for {var_name} in {start}..{end} then {body}"
+                    )
+                } else {
+                    write!(f, " for {var_name} in {start}..{end} then {body}")
+                }
+            }
+            Self::While {
+                condition,
+                body,
+                label,
+            } => {
+                if let Some(label_str) = label {
+                    write!(f, "'{label_str} while {condition} then {body}")
+                } else {
+                    write!(f, "while {condition} then {body}")
+                }
+            }
+            Self::Break(str) => {
+                if let Some(label) = str {
+                    write!(f, "'{label} break")
+                } else {
+                    write!(f, "break")
+                }
+            }
+            Self::Continue(str) => {
+                if let Some(label) = str {
+                    write!(f, "'{label} continue")
+                } else {
+                    write!(f, "continue")
                 }
             }
             Self::Return(Some(expr)) => write!(f, "return {expr}"),
